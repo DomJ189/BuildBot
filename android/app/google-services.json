@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "838595827606",
+    "project_id": "buildbot-46180",
+    "storage_bucket": "buildbot-46180.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:838595827606:android:97c70aa572bc6407c0efb7",
+        "android_client_info": {
+          "package_name": "com.example.buildbot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBT6yjjBz7gSwka-2upWvXcUBMy0fhaMVo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
