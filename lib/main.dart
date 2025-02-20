@@ -12,7 +12,7 @@ import 'providers/theme_provider.dart';
 // Entry point of the application
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env"); // Specify the file name
+  await dotenv.load(fileName: ".env"); // initialise environment file
   await Firebase.initializeApp(); // Initialize Firebase
   runApp(MyApp());
 }
