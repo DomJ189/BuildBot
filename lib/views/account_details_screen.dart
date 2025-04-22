@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
-import 'edit_profile_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../viewmodels/account_details_viewmodel.dart';
+import 'package:intl/intl.dart';
+import 'edit_profile_screen.dart';
+import 'change_email_screen.dart';
+import 'change_password_screen.dart';
+import 'delete_account_screen.dart';
 
 // Allows users to view and manage their account details
 class AccountDetailsScreen extends StatelessWidget {
@@ -11,188 +14,290 @@ class AccountDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser; // Gets the current user
+    return ChangeNotifierProvider(
+      create: (_) => AccountDetailsViewModel(),
+      child: _AccountDetailsView(),
+    );
+  }
+}
+
+class _AccountDetailsView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final viewModel = Provider.of<AccountDetailsViewModel>(context);
+    final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
+    
+    final displayName = viewModel.displayName;
+    final email = viewModel.email;
+    final creationDate = viewModel.creationDate;
+    final formattedDate = DateFormat('MMM d, yyyy').format(creationDate);
+    final initial = viewModel.initial;
     
     return Scaffold(
-      backgroundColor: themeProvider.currentTheme.scaffoldBackgroundColor,
+      backgroundColor: isDarkTheme ? Colors.black : Colors.white,
       appBar: AppBar(
-        backgroundColor: themeProvider.currentTheme.appBarTheme.backgroundColor,
+        backgroundColor: isDarkTheme ? Colors.black : Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: themeProvider.currentTheme.primaryColor),
-          onPressed: () => Navigator.pop(context), // Goes back to the previous screen
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDarkTheme ? Colors.white : Colors.black,
+            size: 30,
+          ),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Account Details',
-          style: themeProvider.currentTheme.textTheme.titleLarge,
-        ),
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Column(
-          children: [
-            _buildNameSection(context, user), // Builds the name section
-            _buildDetailTile(
-              icon: Icons.email_outlined,
-              title: 'Email',
-              value: user?.email ?? 'No email found', // Displays the user's email
-              showButton: true,
-              theme: themeProvider.currentTheme,
-            ),
-            _buildDetailTile(
-              icon: Icons.lock_outline,
-              title: 'Password',
-              value: '••••••••', // Password is hidden
-              showButton: true,
-              theme: themeProvider.currentTheme,
-            ),
-            _buildDetailTile(
-              icon: Icons.calendar_today,
-              title: 'Account Created',
-              value: user?.metadata.creationTime != null
-                  ? DateFormat.yMMMd().format(user!.metadata.creationTime!) // Displays the account creation date
-                  : 'Unknown date',
-              showButton: false,
-              theme: themeProvider.currentTheme,
-            ),
-          ],
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: isDarkTheme ? Colors.white : Colors.black,
+          ),
         ),
       ),
-    );
-  }
-
-  // Builds the name section
-  Widget _buildNameSection(BuildContext context, User? user) {
-    final names = user?.displayName?.split(' ') ?? ['', ''];
-    final firstName = names.isNotEmpty ? names[0] : '';
-    final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: themeProvider.currentTheme.colorScheme.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
-              radius: 28,
-              backgroundColor: themeProvider.currentTheme.colorScheme.secondary,
-              child: Text(
-                firstName.isNotEmpty ? firstName[0] : 'U', // Displays the first letter of the user's name
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Profile card
+              Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDarkTheme ? Color(0xFF121212) : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ),
-            ),
-            title: Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
+                child: Column(
                   children: [
-                    Text(
-                      firstName,
-                      style: TextStyle(
-                        color: themeProvider.currentTheme.colorScheme.primary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    // Profile picture and name
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Profile picture with initial
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: isDarkTheme ? Color(0xFF555555) : Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              initial,
+                              style: TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 20),
+                        // User name
+                        Expanded(
+                          child: Text(
+                            displayName,
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: isDarkTheme ? Colors.white : Colors.black,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
                     ),
-                    if (lastName.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        lastName,
-                        style: TextStyle(
-                          color: themeProvider.currentTheme.colorScheme.primary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                    SizedBox(height: 20),
+                    // Edit Profile button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: Icon(Icons.edit, color: Colors.white),
+                        label: Text(
+                          'Edit Profile',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditProfileScreen(
+                                currentName: displayName,
+                                viewModel: viewModel,
+                              ),
+                            ),
+                          );
+                          
+                          if (result == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Profile updated successfully')),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDarkTheme ? Color(0xFF333333) : Colors.blue,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
-                    ]
+                    ),
                   ],
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: Icon(Icons.edit, size: 18),
-              label: const Text('Edit Profile'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: themeProvider.currentTheme.colorScheme.secondary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () {
-                // Navigates to the edit profile screen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const EditProfileScreen()),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Builds the detail tile for displaying account details
-  Widget _buildDetailTile({
-    required IconData icon,
-    required String title,
-    required String value,
-    bool showButton = false,
-    required ThemeData theme,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: theme.primaryColor),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: theme.textTheme.bodyMedium?.color,
-          fontSize: 14,
-        ),
-      ),
-      subtitle: Text(
-        value,
-        style: TextStyle(
-          color: theme.textTheme.bodyLarge?.color,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      trailing: showButton
-          ? TextButton(
-              onPressed: () {
-                // Add email/password change functionality here
-              },
-              child: Text(
-                'Change',
+              
+              SizedBox(height: 24),
+              
+              // Email section
+              Text(
+                'Email',
                 style: TextStyle(
-                  color: theme.primaryColor,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 16,
+                  color: isDarkTheme ? Colors.white54 : Colors.grey[600],
                 ),
               ),
-            )
-          : null,
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.email, color: isDarkTheme ? Colors.white : Colors.blue, size: 28),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Text(
+                        email,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: isDarkTheme ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChangeEmailScreen(viewModel: viewModel),
+                      ),
+                    ),
+                    child: Text(
+                      'Change',
+                      style: TextStyle(
+                        color: isDarkTheme ? Colors.white : Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              SizedBox(height: 24),
+              
+              // Password section
+              Text(
+                'Password',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDarkTheme ? Colors.white54 : Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.lock, color: isDarkTheme ? Colors.white : Colors.blue, size: 28),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      '••••••••',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: isDarkTheme ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChangePasswordScreen(viewModel: viewModel),
+                      ),
+                    ),
+                    child: Text(
+                      'Change',
+                      style: TextStyle(
+                        color: isDarkTheme ? Colors.white : Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              SizedBox(height: 24),
+              
+              // Account Created section
+              Text(
+                'Account Created',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDarkTheme ? Colors.white54 : Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, color: isDarkTheme ? Colors.white : Colors.blue, size: 28),
+                  SizedBox(width: 16),
+                  Text(
+                    formattedDate,
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: isDarkTheme ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+              
+              SizedBox(height: 40),
+              
+              // Delete Account button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.delete_forever, color: Colors.white),
+                  label: Text(
+                    'Delete Account',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DeleteAccountScreen(viewModel: viewModel),
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 } 

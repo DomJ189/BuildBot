@@ -27,12 +27,16 @@ class AppTheme {
         background: Colors.black,
         text: Colors.white,
         isDark: true,
+        onPrimary: Colors.black,
       );
 
-  // Professional theme configuration
-  static ThemeData get professionalTheme => _buildThemeData(
-        primary: Colors.indigo,
-        secondary: Colors.deepOrange,
+  // Light theme configuration (alias for defaultTheme)
+  static ThemeData get lightTheme => defaultTheme;
+
+  // Blue theme configuration
+  static ThemeData get blueTheme => _buildThemeData(
+        primary: Colors.blue,
+        secondary: Colors.lightBlue,
         background: Colors.white,
         text: Colors.grey[900]!,
         isDark: false,
@@ -45,6 +49,7 @@ class AppTheme {
     required Color background,
     required Color text,
     required bool isDark,
+    Color? onPrimary,
   }) {
     return ThemeData(
       primaryColor: primary, // Set the primary color
@@ -55,7 +60,7 @@ class AppTheme {
         secondary: secondary, // Secondary color for the color scheme
         surface: background, // Background color for surfaces
         onSurface: text, // Text color on surfaces
-        onPrimary: isDark ? Colors.black : Colors.white, // Text color on primary color
+        onPrimary: onPrimary ?? (isDark ? Colors.black : Colors.white), // Text color on primary color
         onSecondary: Colors.white, // Text color on secondary color
         error: Colors.red, // Error color
         onError: Colors.white, // Text color on error

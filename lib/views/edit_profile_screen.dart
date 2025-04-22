@@ -1,158 +1,177 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../viewmodels/account_details_viewmodel.dart';
 
 // Allows users to edit their profile information
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+  final String currentName;
+  final AccountDetailsViewModel viewModel;
+  
+  const EditProfileScreen({
+    super.key,
+    required this.currentName,
+    required this.viewModel,
+  });
 
   @override
-  _EditProfileScreenState createState() => _EditProfileScreenState();
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _formKey = GlobalKey<FormState>(); // Key to manage the form state
-  late TextEditingController _firstNameController; // Controller for first name
-  late TextEditingController _lastNameController; // Controller for last name
-  final User? _user = FirebaseAuth.instance.currentUser; // Current user from Firebase 
-
+  late TextEditingController firstNameController;
+  late TextEditingController lastNameController;
+  
   @override
   void initState() {
     super.initState();
-    // Split display name into first and last names
-    final names = _user?.displayName?.split(' ') ?? ['', ''];
-    _firstNameController = TextEditingController(text: names[0]);
-    _lastNameController = TextEditingController(
-      text: names.length > 1 ? names.sublist(1).join(' ') : '',
-    );
+    
+    // Split the current name into first and last name
+    final nameParts = widget.currentName.split(' ');
+    final firstName = nameParts.isNotEmpty ? nameParts[0] : '';
+    final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+    
+    firstNameController = TextEditingController(text: firstName);
+    lastNameController = TextEditingController(text: lastName);
   }
-
-  // Function to save changes to the profile
-  Future<void> _saveChanges() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final fullName = '${_firstNameController.text} ${_lastNameController.text}';
-        await _user?.updateDisplayName(fullName); // Update the user's display name
-        Navigator.pop(context); // Go back to the previous screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
-        );
-      } catch (e) {
-        // Show error message if updating profile fails
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
-        );
-      }
-    }
+  
+  @override
+  void dispose() {
+    firstNameController.dispose();
+    lastNameController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: themeProvider.currentTheme.scaffoldBackgroundColor,
+      backgroundColor: isDarkTheme ? Colors.black : Colors.white,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        backgroundColor: themeProvider.currentTheme.appBarTheme.backgroundColor,
+        backgroundColor: isDarkTheme ? Colors.black : Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: themeProvider.currentTheme.iconTheme.color),
-          onPressed: () => Navigator.pop(context), // Go back to the previous screen
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDarkTheme ? Colors.white : Colors.blue,
+            size: 30,
+          ),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Edit Profile',
-          style: themeProvider.currentTheme.textTheme.titleLarge?.copyWith(
+          style: TextStyle(
+            fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: isDarkTheme ? Colors.white : Colors.black,
           ),
         ),
-        elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey, // Key to manage the form state
-          child: Column(
-            children: [
-              // First Name Field
-              TextFormField(
-                controller: _firstNameController,
-                style: TextStyle(
-                  color: themeProvider.currentTheme.textTheme.bodyMedium?.color,
-                ),
-                cursorColor: themeProvider.currentTheme.primaryColor,
-                decoration: InputDecoration(
-                  labelText: 'First Name',
-                  labelStyle: TextStyle(color: themeProvider.currentTheme.primaryColor),
-                  filled: true,
-                  fillColor: themeProvider.currentTheme.brightness == Brightness.dark
-                      ? Color(0xFF2D2D2D)
-                      : Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25),
-                    borderSide: BorderSide(color: themeProvider.currentTheme.primaryColor),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your first name'; // Validation message
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16), // Spacing between fields
-              // Last Name Field
-              TextFormField(
-                controller: _lastNameController,
-                style: TextStyle(
-                  color: themeProvider.currentTheme.textTheme.bodyMedium?.color,
-                ),
-                cursorColor: themeProvider.currentTheme.primaryColor,
-                decoration: InputDecoration(
-                  labelText: 'Last Name',
-                  labelStyle: TextStyle(color: themeProvider.currentTheme.primaryColor),
-                  filled: true,
-                  fillColor: themeProvider.currentTheme.brightness == Brightness.dark
-                      ? Color(0xFF2D2D2D)
-                      : Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25),
-                    borderSide: BorderSide(color: themeProvider.currentTheme.primaryColor),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your last name'; // Validation message
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24), // Spacing between fields
-              // Save Changes Button
-              ElevatedButton(
-                onPressed: _saveChanges, // Save changes to the profile
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.currentTheme.primaryColor,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: Text(
-                  'Save Changes',
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'First Name',
                   style: TextStyle(
-                    color: themeProvider.currentTheme.colorScheme.onPrimary,
-                    fontSize: 16
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkTheme ? Colors.white70 : Colors.black87,
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: 8),
+                TextField(
+                  controller: firstNameController,
+                  style: TextStyle(color: isDarkTheme ? Colors.white : Colors.black),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: isDarkTheme ? Color(0xFF1E1E1E) : Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    hintText: 'Enter your first name',
+                    hintStyle: TextStyle(
+                      color: isDarkTheme ? Colors.grey[400] : Colors.grey[500],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 24),
+                
+                Text(
+                  'Last Name',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkTheme ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: lastNameController,
+                  style: TextStyle(color: isDarkTheme ? Colors.white : Colors.black),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: isDarkTheme ? Color(0xFF1E1E1E) : Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    hintText: 'Enter your last name',
+                    hintStyle: TextStyle(
+                      color: isDarkTheme ? Colors.grey[400] : Colors.grey[500],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 40),
+                
+                // Save Changes button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final fullName = '${firstNameController.text} ${lastNameController.text}'.trim();
+                      if (fullName.isNotEmpty) {
+                        try {
+                          await widget.viewModel.updateDisplayName(fullName);
+                          Navigator.pop(context, true); // Return success
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error updating profile: $e')),
+                          );
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Name cannot be empty')),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDarkTheme ? Colors.white : Colors.blue,
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: isDarkTheme ? Color(0xFF333333) : Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                // Add extra padding at the bottom to ensure button is visible with keyboard
+                SizedBox(height: 100),
+              ],
+            ),
           ),
         ),
       ),

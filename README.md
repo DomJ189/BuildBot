@@ -5,10 +5,11 @@ A mobile application that provides AI-assisted PC building and maintenance guida
 ## Option 1: Direct Installation (Recommended)
 
 ### Android Users
-1. Download the APK file provided with this submission (Can be found in /build/app/outputs/flutter-apk/buildbot.apk)
-2. On your Android device, open the APK file
-3. If prompted, allow installation from unknown sources
-4. Install and launch the app
+1. Connect your Android device to your computer via USB
+2. Drag the APK file provided with this submission (Can be found in /apk/buildbot.apk) to your Android device
+3. Go to file manager, find the APK file, and tap it to download
+4. If prompted, allow installation from unknown sources
+5. Once installed, launch the app
 
 ### System Requirements
 - Android 6.0 or higher
@@ -21,7 +22,7 @@ If you wish to run the code directly:
 ### Prerequisites
 1. Install Flutter SDK from: https://docs.flutter.dev/get-started/install
 2. Install Android Studio or VS Code
-3. Set up an Android emulator or connect a physical device
+3. Set up an Android emulator or connect a physical device via usb debugging
 
 ### Setup Steps
 1. Clone this repository

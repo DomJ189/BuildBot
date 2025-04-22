@@ -2,152 +2,134 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme.dart';
 import '../providers/theme_provider.dart';
+import '../viewmodels/theme_selection_viewmodel.dart';
 
 // Allows users to select and apply themes
-class ThemeSelectionScreen extends StatefulWidget {
+class ThemeSelectionScreen extends StatelessWidget {
   const ThemeSelectionScreen({super.key});
-
-  @override
-  State<ThemeSelectionScreen> createState() => _ThemeSelectionScreenState();
-}
-
-class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
-  late ThemeData _selectedTheme; // Variable to hold the selected theme
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize the selected theme from the provider
-    _selectedTheme = Provider.of<ThemeProvider>(context, listen: false).currentTheme;
-  }
-
-  // Function to save the selected theme
-  void _saveTheme() {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    themeProvider.setTheme(_selectedTheme); // Update the theme in the provider
-    Navigator.pop(context); // Go back to the previous screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Theme updated successfully')),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
-    return Scaffold(
-      backgroundColor: themeProvider.currentTheme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: themeProvider.currentTheme.appBarTheme.backgroundColor,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: themeProvider.currentTheme.iconTheme.color),
-          onPressed: () => Navigator.pop(context), // Go back to the previous screen
-        ),
-        title: Text(
-          'Select Theme',
-          style: themeProvider.currentTheme.textTheme.titleLarge,
-        ),
-        elevation: 0,
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Preview',
-                    style: themeProvider.currentTheme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildPreviewArea(themeProvider), // Build the preview area
-                  const SizedBox(height: 32),
-                  const Text(
-                    'Choose a theme',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+    return ChangeNotifierProvider(
+      create: (_) => ThemeSelectionViewModel(themeProvider.currentTheme),
+      child: Consumer<ThemeSelectionViewModel>(
+        builder: (context, viewModel, child) {
+          // Use the current app theme for the screen itself
+          final currentTheme = themeProvider.currentTheme;
+          
+          return Scaffold(
+            backgroundColor: currentTheme.scaffoldBackgroundColor,
+            appBar: AppBar(
+              backgroundColor: currentTheme.appBarTheme.backgroundColor,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back, color: currentTheme.iconTheme.color),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                'Select Theme',
+                style: currentTheme.textTheme.titleLarge,
+              ),
+              elevation: 0,
+            ),
+            body: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Preview',
+                          style: currentTheme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildPreviewArea(viewModel), // Build the preview area with selected theme
+                        const SizedBox(height: 32),
+                        Text(
+                          'Choose a theme',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: currentTheme.textTheme.titleMedium?.color,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Theme Options
+                        // Light Theme Option
+                        _buildThemeOption(
+                          context,
+                          title: 'Light Theme',
+                          isSelected: viewModel.isThemeSelected(AppTheme.defaultTheme),
+                          colors: AppTheme.defaultTheme,
+                          currentTheme: currentTheme,
+                          onTap: () {
+                            viewModel.setSelectedTheme(AppTheme.defaultTheme);
+                          },
+                        ),
+                        // Dark Theme Option
+                        _buildThemeOption(
+                          context,
+                          title: 'Dark Theme',
+                          isSelected: viewModel.isThemeSelected(AppTheme.darkTheme),
+                          colors: AppTheme.darkTheme,
+                          currentTheme: currentTheme,
+                          onTap: () {
+                            viewModel.setSelectedTheme(AppTheme.darkTheme);
+                          },
+                        ),
+                        const SizedBox(height: 32),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await viewModel.saveSelectedTheme();
+                            themeProvider.setTheme(viewModel.selectedTheme);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Theme updated successfully')),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: currentTheme.primaryColor,
+                            foregroundColor: currentTheme.colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            minimumSize: Size(double.infinity, 48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Save'),
+                        ),
+                        const SizedBox(height: 16),
+                        // Professional Theme Option
+                        // _buildThemeOption(
+                        //   context,
+                        //   title: 'Professional Theme',
+                        //   isSelected: viewModel.isThemeSelected(AppTheme.professionalTheme),
+                        //   colors: AppTheme.professionalTheme,
+                        //   currentTheme: currentTheme,
+                        //   onTap: () {
+                        //     viewModel.setSelectedTheme(AppTheme.professionalTheme);
+                        //   },
+                        // ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Theme Options
-                  // Light Theme Option
-                  _buildThemeOption(
-                    context,
-                    title: 'Light Theme',
-                    isSelected: _selectedTheme == AppTheme.defaultTheme,
-                    colors: AppTheme.defaultTheme,
-                    onTap: () {
-                      setState(() {
-                        _selectedTheme = AppTheme.defaultTheme; // Update the selected theme
-                      });
-                    },
-                  ),
-                  // Dark Theme Option
-                  _buildThemeOption(
-                    context,
-                    title: 'Dark Theme',
-                    isSelected: _selectedTheme == AppTheme.darkTheme,
-                    colors: AppTheme.darkTheme,
-                    onTap: () {
-                      setState(() {
-                        _selectedTheme = AppTheme.darkTheme; // Update the selected theme
-                      });
-                    },
-                  ),
-                  // Professional Theme Option
-                  _buildThemeOption(
-                    context,
-                    title: 'Professional Theme',
-                    isSelected: _selectedTheme == AppTheme.professionalTheme,
-                    colors: AppTheme.professionalTheme,
-                    onTap: () {
-                      setState(() {
-                        _selectedTheme = AppTheme.professionalTheme; // Update the selected theme
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: themeProvider.currentTheme.scaffoldBackgroundColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(16),
-              child: ElevatedButton(
-                onPressed: _saveTheme, // Save the selected theme
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.currentTheme.primaryColor,
-                  foregroundColor: themeProvider.currentTheme.colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text('Save'),
-              ),
+              ],
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
   // Build the preview area for the selected theme
-  Widget _buildPreviewArea(ThemeProvider themeProvider) {
-    final isDarkTheme = _selectedTheme.brightness == Brightness.dark;
+  Widget _buildPreviewArea(ThemeSelectionViewModel viewModel) {
+    final isDarkTheme = viewModel.selectedTheme.brightness == Brightness.dark;
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -155,7 +137,7 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
         color: isDarkTheme ? Colors.black : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDarkTheme ? Color(0xFF424242) : _selectedTheme.primaryColor,
+          color: isDarkTheme ? Color(0xFF424242) : viewModel.selectedTheme.primaryColor,
           width: 2
         ),
       ),
@@ -169,18 +151,32 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'What can I help with?',
-                  style: TextStyle(
-                    color: isDarkTheme ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.bold,
+                // Replace the text with a new chat button
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: viewModel.selectedTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.add, 
-                  color: isDarkTheme ? Colors.white : Colors.black,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add,
+                        color: viewModel.selectedTheme.colorScheme.onPrimary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'New Chat',
+                        style: TextStyle(
+                          color: viewModel.selectedTheme.colorScheme.onPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -196,7 +192,7 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isDarkTheme ? Color(0xFF424242) : _selectedTheme.primaryColor,
+                      color: isDarkTheme ? Color(0xFF424242) : viewModel.selectedTheme.primaryColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -224,10 +220,10 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                 ),
                 Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: isDarkTheme ? Color(0xFF2D2D2D) : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(25),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                   child: Row(
                     children: [
@@ -242,13 +238,15 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                         ),
                       ),
                       Container(
-                        padding: EdgeInsets.all(8),
+                        width: 40,
+                        height: 40,
+                        margin: EdgeInsets.only(left: 16),
                         decoration: BoxDecoration(
-                          color: isDarkTheme ? Colors.white : _selectedTheme.primaryColor,
-                          shape: BoxShape.circle,
+                          color: isDarkTheme ? Colors.white : viewModel.selectedTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          Icons.send,
+                          Icons.arrow_forward,
                           size: 20,
                           color: isDarkTheme 
                               ? Color(0xFF2D2D2D) 
@@ -272,10 +270,10 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
     required String title,
     required bool isSelected,
     required ThemeData colors,
+    required ThemeData currentTheme,
     required VoidCallback onTap,
   }) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
+    final isDarkTheme = currentTheme.brightness == Brightness.dark;
     
     return Card(
       color: isDarkTheme 
@@ -288,7 +286,7 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
         title: Text(
           title,
           style: TextStyle(
-            color: isDarkTheme ? Colors.white : Colors.black,
+            color: currentTheme.textTheme.bodyLarge?.color ?? (isDarkTheme ? Colors.white : Colors.black),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
