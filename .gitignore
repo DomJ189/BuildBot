@@ -50,3 +50,6 @@ app.*.map.json
 # Ignore Google Services JSON
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+
+# Ignore apk folder
+/apk/

@@ -13,16 +13,48 @@ class YouTubeVideoPlayer extends StatelessWidget {
 
   // Extract the URL launch function for reusability
   Future<void> _launchYouTubeVideo() async {
-    final Uri url = Uri.parse(video.watchUrl);
+    // Create various URL formats for different platforms
+    final Uri youtubeAppUri = Uri.parse(video.appUrl);
+    final Uri youtubeDeepLinkUri = Uri.parse(video.deepLinkUrl);
+    final Uri youtubeWebUri = Uri.parse(video.watchUrl);
+    
     try {
-      if (!await launchUrl(
-        url,
+      // First try to launch with the deep link format (most reliable for apps)
+      bool launched = await launchUrl(
+        youtubeDeepLinkUri,
         mode: LaunchMode.externalApplication,
-      )) {
-        throw Exception('Could not launch $url');
+      );
+      
+      // If the deep link fails, try the app URL format
+      if (!launched) {
+        launched = await launchUrl(
+          youtubeAppUri,
+          mode: LaunchMode.externalApplication,
+        );
+        
+        // If the app URL also fails, fall back to the web browser
+        if (!launched) {
+          if (!await launchUrl(
+            youtubeWebUri,
+            mode: LaunchMode.externalApplication,
+          )) {
+            throw Exception('Could not launch YouTube');
+          }
+        }
       }
     } catch (e) {
-      debugPrint('Error launching URL: $e');
+      // If opening the app fails, try the web URL as a fallback
+      debugPrint('Error launching YouTube app: $e');
+      try {
+        if (!await launchUrl(
+          youtubeWebUri,
+          mode: LaunchMode.externalApplication,
+        )) {
+          throw Exception('Could not launch YouTube');
+        }
+      } catch (webError) {
+        debugPrint('Error launching YouTube in browser: $webError');
+      }
     }
   }
 
@@ -34,10 +66,14 @@ class YouTubeVideoPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get the current theme brightness
+    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
+    
     return Card(
       margin: EdgeInsets.symmetric(vertical: 8),
       clipBehavior: Clip.antiAlias,
-      elevation: 3,
+      elevation: isDarkTheme ? 4 : 3,
+      color: isDarkTheme ? Color(0xFF2A2A2A) : null, // Dark background for dark theme
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -61,7 +97,7 @@ class YouTubeVideoPlayer extends StatelessWidget {
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           width: double.infinity,
-                          color: Colors.grey[300],
+                          color: isDarkTheme ? Colors.grey[800] : Colors.grey[300],
                           child: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -69,7 +105,7 @@ class YouTubeVideoPlayer extends StatelessWidget {
                                 Icon(Icons.error, color: Colors.red),
                                 SizedBox(height: 4),
                                 Text('Image not available',
-                                    style: TextStyle(color: Colors.grey[700])),
+                                    style: TextStyle(color: isDarkTheme ? Colors.grey[400] : Colors.grey[700])),
                               ],
                             ),
                           ),
@@ -79,7 +115,7 @@ class YouTubeVideoPlayer extends StatelessWidget {
                         if (loadingProgress == null) return child;
                         return Container(
                           width: double.infinity,
-                          color: Colors.grey[200],
+                          color: isDarkTheme ? Colors.grey[800] : Colors.grey[200],
                           child: Center(
                             child: CircularProgressIndicator(
                               value: loadingProgress.expectedTotalBytes != null
@@ -178,6 +214,7 @@ class YouTubeVideoPlayer extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    color: isDarkTheme ? Colors.white : null,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -188,14 +225,14 @@ class YouTubeVideoPlayer extends StatelessWidget {
                     Icon(
                       Icons.person,
                       size: 16,
-                      color: Colors.grey[600],
+                      color: isDarkTheme ? Colors.grey[400] : Colors.grey[600],
                     ),
                     SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         video.channelTitle,
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: isDarkTheme ? Colors.grey[400] : Colors.grey[600],
                           fontSize: 14,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -209,13 +246,13 @@ class YouTubeVideoPlayer extends StatelessWidget {
                     Icon(
                       Icons.calendar_today,
                       size: 16,
-                      color: Colors.grey[600],
+                      color: isDarkTheme ? Colors.grey[400] : Colors.grey[600],
                     ),
                     SizedBox(width: 4),
                     Text(
                       _formatPublishedDate(),
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: isDarkTheme ? Colors.grey[400] : Colors.grey[600],
                         fontSize: 12,
                       ),
                     ),

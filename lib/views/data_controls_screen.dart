@@ -43,10 +43,12 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
  
     
     return Scaffold(
-      backgroundColor: isDarkTheme ? Colors.black : Color(0xFFF0F8FF),
+      backgroundColor: isDarkTheme ? Colors.black : Colors.white,
       appBar: AppBar(
-        backgroundColor: isDarkTheme ? Colors.black : Color(0xFFF0F8FF),
+        backgroundColor: isDarkTheme ? Colors.black : Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,

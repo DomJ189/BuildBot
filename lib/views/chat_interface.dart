@@ -15,7 +15,7 @@ class ChatInterface extends StatefulWidget {
   _ChatInterfaceState createState() => _ChatInterfaceState();
 }
 
-class _ChatInterfaceState extends State<ChatInterface> {
+class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late ChatInterfaceViewModel _viewModel;
@@ -23,9 +23,32 @@ class _ChatInterfaceState extends State<ChatInterface> {
   // Add a new controller for editing messages
   final TextEditingController _editController = TextEditingController();
   
+  // Add animation controller
+  late AnimationController _dotAnimationController;
+  int _activeDotIndex = 0;
+  
   @override
   void initState() {
     super.initState();
+    
+    // Initialize the dot animation controller
+    _dotAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    )..addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          // Move to the next dot
+          _activeDotIndex = (_activeDotIndex + 1) % 3;
+        });
+        // Reset and repeat
+        _dotAnimationController.reset();
+        _dotAnimationController.forward();
+      }
+    });
+    
+    // Start the animation
+    _dotAnimationController.forward();
     
     // Add scroll listener to show/hide scroll to bottom button
     _scrollController.addListener(_scrollListener);
@@ -53,6 +76,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
     _editController.dispose(); // Dispose of edit controller
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
+    _dotAnimationController.dispose();
     super.dispose();
   }
   
@@ -252,9 +276,12 @@ class _ChatInterfaceState extends State<ChatInterface> {
               _buildBotMessage(
                 viewModel.editingMessageIndex != null 
                     ? "Regenerating response..." 
-                    : viewModel.currentTypingText,
+                    : (viewModel.currentTypingText.isNotEmpty 
+                        ? viewModel.currentTypingText 
+                        : ""),
                 themeProvider,
                 isTyping: true,
+                messageIndex: -1, // Not a saved message yet
               ),
               // Show videos during typing if available
               if (viewModel.currentVideos.isNotEmpty)
@@ -321,7 +348,8 @@ class _ChatInterfaceState extends State<ChatInterface> {
                 _buildBotMessage(
                   message['message'] ?? '', 
                   themeProvider,
-                  regenerated: message['regenerated'] == true
+                  regenerated: message['regenerated'] == true,
+                  messageIndex: index,
                 ),
                 // Show videos if available and not a conversational response after videos
                 if (hasVideos && !(isConversational && previousMessageHadVideos))
@@ -373,6 +401,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Edit button for user messages
               GestureDetector(
@@ -409,6 +438,26 @@ class _ChatInterfaceState extends State<ChatInterface> {
                     style: TextStyle(
                       color: isDarkTheme ? Colors.black : Colors.white,
                       fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+              // User avatar with initial
+              SizedBox(width: 8),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isDarkTheme ? Color(0xFF555555) : Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    _viewModel.userInitial,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -504,7 +553,11 @@ class _ChatInterfaceState extends State<ChatInterface> {
     );
   }
   
-  Widget _buildBotMessage(String message, ThemeProvider themeProvider, {bool isTyping = false, bool regenerated = false}) {
+  Widget _buildBotMessage(String message, ThemeProvider themeProvider, {
+    bool isTyping = false, 
+    bool regenerated = false,
+    int messageIndex = -1,
+  }) {
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     
     return Align(
@@ -512,63 +565,112 @@ class _ChatInterfaceState extends State<ChatInterface> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            margin: EdgeInsets.only(bottom: regenerated ? 2 : 8, right: 64),
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: themeProvider.currentTheme.brightness == Brightness.dark
-                  ? Colors.grey[800]
-                  : Colors.grey[200],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                MarkdownBody(
-                  data: message,
-                  styleSheet: MarkdownStyleSheet(
-                    p: TextStyle(
-                      color: themeProvider.currentTheme.textTheme.bodyLarge?.color,
-                    ),
-                    h1: TextStyle(
-                      color: themeProvider.currentTheme.textTheme.titleLarge?.color,
-                    ),
-                    h2: TextStyle(
-                      color: themeProvider.currentTheme.textTheme.titleMedium?.color,
-                    ),
-                    code: TextStyle(
-                      backgroundColor: themeProvider.currentTheme.brightness == Brightness.dark
-                          ? Colors.grey[900]
-                          : Colors.grey[100],
-                      color: Colors.blue,
-                    ),
-                    codeblockDecoration: BoxDecoration(
-                      color: themeProvider.currentTheme.brightness == Brightness.dark
-                          ? Colors.grey[900]
-                          : Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Bot avatar placeholder
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isDarkTheme ? Colors.blue[700] : Colors.blue[300],
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.smart_toy,
+                    size: 20,
+                    color: Colors.white,
                   ),
                 ),
-                if (isTyping)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildTypingDot(themeProvider, 0),
-                        _buildTypingDot(themeProvider, 1),
-                        _buildTypingDot(themeProvider, 2),
-                      ],
-                    ),
+              ),
+              SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  margin: EdgeInsets.only(bottom: regenerated ? 2 : 8),
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: themeProvider.currentTheme.brightness == Brightness.dark
+                        ? Colors.grey[800]
+                        : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(16),
                   ),
-              ],
-            ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (message.isNotEmpty)
+                        MarkdownBody(
+                          data: message,
+                          styleSheet: MarkdownStyleSheet(
+                            p: TextStyle(
+                              color: themeProvider.currentTheme.textTheme.bodyLarge?.color,
+                            ),
+                            h1: TextStyle(
+                              color: themeProvider.currentTheme.textTheme.titleLarge?.color,
+                            ),
+                            h2: TextStyle(
+                              color: themeProvider.currentTheme.textTheme.titleMedium?.color,
+                            ),
+                            code: TextStyle(
+                              backgroundColor: themeProvider.currentTheme.brightness == Brightness.dark
+                                  ? Colors.grey[900]
+                                  : Colors.grey[100],
+                              color: Colors.blue,
+                            ),
+                            codeblockDecoration: BoxDecoration(
+                              color: themeProvider.currentTheme.brightness == Brightness.dark
+                                  ? Colors.grey[900]
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      if (isTyping)
+                        Padding(
+                          padding: EdgeInsets.only(top: message.isNotEmpty ? 8.0 : 0.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildTypingDot(themeProvider, 0),
+                              _buildTypingDot(themeProvider, 1),
+                              _buildTypingDot(themeProvider, 2),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              // Add regenerate button for bot messages (not during typing and valid index)
+              if (!isTyping && messageIndex >= 0)
+                Builder(
+                  builder: (context) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 4.0),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.refresh,
+                          size: 18.0,
+                          color: isDarkTheme ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                        onPressed: () {
+                          final viewModel = Provider.of<ChatInterfaceViewModel>(context, listen: false);
+                          viewModel.regenerateMessage(messageIndex);
+                        },
+                        tooltip: 'Regenerate response',
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                        splashRadius: 16,
+                      ),
+                    );
+                  }
+                ),
+            ],
           ),
           // Show regenerated indicator if message was regenerated
           if (regenerated)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+              padding: const EdgeInsets.only(bottom: 8.0, left: 48.0),
               child: Text(
                 'regenerated',
                 style: TextStyle(
@@ -584,15 +686,22 @@ class _ChatInterfaceState extends State<ChatInterface> {
   }
   
   Widget _buildTypingDot(ThemeProvider themeProvider, int index) {
+    final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
+    
+    // Use black dots with appropriate opacity for dark theme
+    final dotColor = isDarkTheme 
+        ? Colors.white.withOpacity(index == _activeDotIndex ? 1.0 : 0.3)
+        : Colors.black.withOpacity(index == _activeDotIndex ? 1.0 : 0.3);
+    
     return AnimatedBuilder(
-      animation: AlwaysStoppedAnimation(0),
+      animation: _dotAnimationController,
       builder: (context, child) {
         return Container(
           margin: EdgeInsets.symmetric(horizontal: 2),
           height: 8,
           width: 8,
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.6),
+            color: dotColor,
             shape: BoxShape.circle,
           ),
         );

@@ -55,6 +55,12 @@ class ChatService {
     return user.email;
   }
 
+  // Get the current user's display name for the avatar
+  String get currentUserDisplayName {
+    final user = _auth.currentUser;
+    return user?.displayName ?? 'User';
+  }
+
   // Add this method to check if chat saving is enabled
   Future<bool> isChatSavingEnabled() async {
     final prefs = await SharedPreferences.getInstance();

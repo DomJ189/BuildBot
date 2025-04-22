@@ -1,52 +1,88 @@
 # BuildBot
 
-A mobile application that provides AI-assisted PC building and maintenance guidance.
+![BuildBot Logo](https://raw.githubusercontent.com/DomJ189/BuildBot/master/assets/images/buildbot_logo.png)
 
-## Option 1: Direct Installation (Recommended)
+## Overview
+BuildBot is a mobile application that provides AI-assisted PC building and maintenance guidance. It leverages artificial intelligence to offer personalized recommendations, troubleshooting, and step-by-step guidance for computer enthusiasts of all skill levels.
 
-### Android Users
-1. Connect your Android device to your computer via USB
-2. Drag the APK file provided with this submission (Can be found in /apk/buildbot.apk) to your Android device
-3. Go to file manager, find the APK file, and tap it to download
-4. If prompted, allow installation from unknown sources
-5. Once installed, launch the app
+## Key Features
+- **AI-Powered Assistance**: Get intelligent recommendations for PC components based on your needs and budget
+- **Interactive Chat Interface**: Communicate with the AI assistant using natural language
+- **PC Building Guides**: Step-by-step instructions for assembling a custom PC
+- **Troubleshooting Support**: Diagnose and fix common PC issues
+- **YouTube Integration**: Relevant tutorial videos recommended by the AI
+- **Component Compatibility**: Check if components will work together before purchasing
+- **User Authentication**: Secure login and account management
+- **Dark/Light Theme**: Customizable UI to suit your preferences
+- **Chat History**: Review previous conversations and advice
 
-### System Requirements
-- Android 6.0 or higher
-- Active internet connection
+## Screenshots
+<table>
+  <tr>
+    <td><img src="assets/screenshots/chat_screen.png" width="200"/></td>
+    <td><img src="assets/screenshots/theme_screen.png" width="200"/></td>
+    <td><img src="assets/screenshots/profile_screen.png" width="200"/></td>
+  </tr>
+</table>
 
-## Option 2: Running the Code (Development)
+## Technologies & Software Used
+- **Flutter (v3.19)**: Cross-platform UI toolkit for building natively compiled applications
+- **Dart (v3.0+)**: Programming language optimized for building UIs
+- **Firebase Suite**:
+  - Firebase Authentication: For secure user management
+  - Cloud Firestore: NoSQL database for chat history and user data
+  - Firebase Storage: For asset storage
+- **APIs & Services**:
+  - YouTube Data API: For video recommendations
+  - GPT-4 Integration: Powering the AI assistant's intelligence
+- **State Management**:
+  - Provider: For app-wide state management
+  - MVVM Architecture: For separation of UI and business logic
+- **Development Tools**:
+  - Visual Studio Code: Primary IDE
+  - Android Studio: For Android-specific development and emulation
+  - Flutter DevTools: For debugging and performance analysis
+- **UI Components**:
+  - Material Design: For consistent and modern UI elements
+  - Custom animations: For enhanced user experience
+  - Responsive layouts: For compatibility across different device sizes
 
-If you wish to run the code directly:
+## Development Setup
 
 ### Prerequisites
-1. Install Flutter SDK from: https://docs.flutter.dev/get-started/install
-2. Install Android Studio or VS Code
-3. Set up an Android emulator or connect a physical device via usb debugging
+1. Install Flutter SDK: https://docs.flutter.dev/get-started/install
+2. Install Android Studio or VS Code with Flutter plugins
+3. Set up an Android emulator or connect a physical device
 
-### Setup Steps
+### Getting Started
 1. Clone this repository
-2. Open terminal in project directory
-3. Run `flutter pub get`
-4. Run `flutter run`
+   ```
+   git clone https://github.com/DomJ189/BuildBot.git
+   ```
+2. Navigate to the project directory
+   ```
+   cd BuildBot
+   ```
+3. Install dependencies
+   ```
+   flutter pub get
+   ```
+4. Run the application
+   ```
+   flutter run
+   ```
 
 ### Troubleshooting
-- If you get dependency errors, try:
+- If you encounter dependency errors, try:
   ```
   flutter clean
   flutter pub get
   ```
 - Make sure you have an emulator running or device connected
-- Check Flutter installation with `flutter doctor`
+- Verify your Flutter installation with `flutter doctor`
 
-## Features
-- AI-powered PC building assistance
-- Chat history
-- User authentication
-- Theme customization
-- Account management
+## About the Project
+BuildBot was created to democratize PC building knowledge, making it accessible to everyone from beginners to experienced builders. By combining AI technology with a user-friendly interface, BuildBot aims to reduce the learning curve associated with PC building and maintenance.
 
-## Summary
-- All necessary API keys and configurations are included in the app
-- No additional setup is required for API keys or Firebase
-- For quickest evaluation, use Option 1 (APK installation)
+## Contact
+- GitHub: [@DomJ189](https://github.com/DomJ189)

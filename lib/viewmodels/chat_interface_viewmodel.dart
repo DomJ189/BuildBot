@@ -134,13 +134,16 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     
     // If there's a corresponding bot message, regenerate it
     if (nextBotIndex != -1) {
-      // Set bot typing state
+      // Clear previous typing data and set bot typing state
       isBotTyping = true;
+      currentTypingText = '';  // Ensure no previous text is displayed while regenerating
+      currentVideos = [];      // Clear any previous videos
       notifyListeners();
       
       try {
-        // Include messages up to the edited user message for context
-        final botMessages = messages.sublist(0, editedIndex! + 1).map((m) => {
+        // Include ALL messages up to but not including the bot message that will be regenerated
+        // This ensures proper context is maintained for the bot response
+        final botMessages = messages.sublist(0, nextBotIndex).map((m) => {
           'role': m['sender'] == 'user' ? 'user' : 'assistant',
           'content': m['message'] ?? '',
         }).toList();
@@ -244,8 +247,10 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     });
     notifyListeners();
     
-    // Set bot typing state
+    // Clear previous typing data and set bot typing state
     isBotTyping = true;
+    currentTypingText = '';  // Ensure no previous text is displayed while waiting
+    currentVideos = [];      // Clear any previous videos
     notifyListeners();
     
     try {
@@ -256,7 +261,8 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         currentChatTitle = chat.title;
       }
       
-      // Convert messages to format expected by BotService
+      // Convert ALL previous messages to format expected by BotService
+      // This ensures the bot has complete conversation history for context
       final botMessages = messages.map((m) => {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',
@@ -329,9 +335,10 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   }
   
   void startTypingAnimation(String response, List<YouTubeVideo> videos) {
+    // Reset all typing-related variables to ensure previous response doesn't show
     fullBotResponse = response;
     currentCharIndex = 0;
-    currentTypingText = '';
+    currentTypingText = '';  // Clear the current typing text
     currentVideos = videos.isNotEmpty ? videos : [];
     
     // Cancel any existing timer
@@ -424,5 +431,100 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   void dispose() {
     typingTimer?.cancel();
     super.dispose();
+  }
+  
+  // User information
+  String get userInitial {
+    final displayName = chatService.currentUserDisplayName;
+    return displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+  }
+  
+  // Add regenerateMessage method
+  Future<void> regenerateMessage(int botMessageIndex) async {
+    if (botMessageIndex < 0 || botMessageIndex >= messages.length) {
+      return;
+    }
+
+    // Only regenerate bot messages
+    if (messages[botMessageIndex]['sender'] != 'bot') {
+      return;
+    }
+
+    // Find the previous user message that triggered this bot response
+    int previousUserIndex = -1;
+    for (int i = botMessageIndex - 1; i >= 0; i--) {
+      if (messages[i]['sender'] == 'user') {
+        previousUserIndex = i;
+        break;
+      }
+    }
+
+    if (previousUserIndex == -1) {
+      return; // No user message found to regenerate from
+    }
+
+    // Clear previous typing data and set bot typing state
+    isBotTyping = true;
+    currentTypingText = '';  // Ensure no previous text is displayed while regenerating
+    currentVideos = [];      // Clear any previous videos
+    notifyListeners();
+    
+    try {
+      // Get the user message that triggered this response
+      final userMessage = messages[previousUserIndex]['message'] as String;
+      
+      // Include ALL messages up to the bot message for complete context
+      // This ensures the bot has the full conversation history for better context preservation
+      final botMessages = messages.sublist(0, botMessageIndex).map((m) => {
+        'role': m['sender'] == 'user' ? 'user' : 'assistant',
+        'content': m['message'] ?? '',
+      }).toList();
+      
+      // Get new response from bot service with videos
+      final response = await botService.getResponseWithVideos(userMessage, botMessages);
+      
+      // Process videos from response
+      List<YouTubeVideo> videos = [];
+      if (response.containsKey('videos')) {
+        try {
+          final videoList = response['videos'] as List<dynamic>;
+          if (videoList.isNotEmpty) {
+            videos = videoList.map((v) => v as YouTubeVideo).toList();
+          }
+        } catch (e) {
+          print('Error processing videos: $e');
+        }
+      }
+      
+      // Update the bot message
+      messages[botMessageIndex]['message'] = response['text'];
+      messages[botMessageIndex]['videos'] = videos;
+      messages[botMessageIndex]['regenerated'] = true; // Mark as regenerated
+      
+      // Remove any subsequent messages as they're now invalid
+      if (botMessageIndex < messages.length - 1) {
+        messages.removeRange(botMessageIndex + 1, messages.length);
+      }
+      
+      // Finish typing
+      isBotTyping = false;
+      
+      // Update conversation history in bot service with all current messages
+      final updatedBotMessages = messages.map((m) => {
+        'role': m['sender'] == 'user' ? 'user' : 'assistant',
+        'content': m['message'] ?? '',
+      }).toList();
+      botService.initializeConversationHistory(updatedBotMessages);
+      
+      // Save chat
+      _saveCurrentChat();
+      
+      notifyListeners();
+    } catch (e) {
+      // Handle error
+      print('Error regenerating message: $e');
+      isBotTyping = false;
+      notifyListeners();
+    }
   }
 } 
