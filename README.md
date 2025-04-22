@@ -34,7 +34,7 @@ BuildBot is a mobile application that provides AI-assisted PC building and maint
   - Firebase Storage: For asset storage
 - **APIs & Services**:
   - YouTube Data API: For video recommendations
-  - GPT-4 Integration: Powering the AI assistant's intelligence
+  - Perplexity Sonar Model Integration: Powering the AI assistant's intelligence
 - **State Management**:
   - Provider: For app-wide state management
   - MVVM Architecture: For separation of UI and business logic
