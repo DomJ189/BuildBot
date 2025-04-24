@@ -14,6 +14,14 @@ BuildBot is a mobile application that provides AI-assisted PC building and maint
 - **Dark/Light Theme**: Customizable UI to suit your preferences
 - **Chat History**: Review previous conversations and advice
 
+## Screenshots
+<table>
+  <tr>
+    <td><img src="assets/screenshots/chat_screen.png" width="200"/></td>
+    <td><img src="assets/screenshots/theme_screen.png" width="200"/></td>
+    <td><img src="assets/screenshots/profile_screen.png" width="200"/></td>
+  </tr>
+</table>
 
 ## Technologies & Software Used
 - **Flutter (v3.19)**: Cross-platform UI toolkit for building natively compiled applications
