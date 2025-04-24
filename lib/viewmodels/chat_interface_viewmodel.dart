@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/bot_service.dart';
 import '../services/chat_service.dart';
 import '../models/chat.dart';
+import '../models/reddit_post_preview.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/youtube_service.dart';
 
@@ -16,6 +17,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   bool isBotTyping = false;
   bool isScrollToBottomButtonVisible = false;
   List<YouTubeVideo> currentVideos = [];
+  List<RedditPostPreview> currentRedditPosts = [];
   
   // Typing animation properties
   String currentTypingText = '';
@@ -29,7 +31,11 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   
   ChatInterfaceViewModel({required this.chatService}) : 
       // Initialize with API key from .env file
-      botService = BotService(dotenv.env['PERPLEXITY_API_KEY'] ?? 'your-api-key') {
+      botService = BotService(
+        dotenv.env['PERPLEXITY_API_KEY'] ?? 'your-api-key',
+        redditClientId: dotenv.env['REDDIT_CLIENT_ID'] ?? '',
+        redditClientSecret: dotenv.env['REDDIT_CLIENT_SECRET'] ?? '',
+      ) {
     // Initialize with current chat if available
     if (chatService.currentChat != null) {
       currentChatId = chatService.currentChat!.id;
@@ -61,10 +67,37 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
         }
         
+        // Convert saved Reddit post data back to RedditPostPreview objects
+        List<RedditPostPreview> redditPosts = [];
+        if (message.containsKey('redditPosts') && message['redditPosts'] != null) {
+          try {
+            List<dynamic> postList = message['redditPosts'] as List<dynamic>;
+            redditPosts = postList.map((p) {
+              if (p is Map<String, dynamic>) {
+                return RedditPostPreview(
+                  title: p['title'] ?? '',
+                  subreddit: p['subreddit'] ?? '',
+                  url: p['url'] ?? '',
+                  score: p['score'] ?? 0,
+                  commentCount: p['commentCount'] ?? 0,
+                  thumbnailUrl: p['thumbnailUrl'],
+                  relevanceScore: p['relevanceScore']?.toDouble() ?? 0.0,
+                );
+              }
+              return null;
+            }).whereType<RedditPostPreview>().toList();
+          } catch (e) {
+            print('Error loading saved Reddit posts: $e');
+          }
+        }
+        
         messages.add({
           'sender': message['sender'] ?? '',
           'message': message['message'] ?? '',
           'videos': videos,
+          'redditPosts': redditPosts,
+          'edited': message['edited'] ?? false,
+          'regenerated': message['regenerated'] ?? false,
         });
       }
       
@@ -130,20 +163,23 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     
     // Reset editing state but keep typing state active
     editingMessageIndex = null;
-    notifyListeners();
     
     // If there's a corresponding bot message, regenerate it
     if (nextBotIndex != -1) {
+      // Remove the bot message that will be regenerated
+      final botMessage = messages.removeAt(nextBotIndex);
+      
       // Clear previous typing data and set bot typing state
       isBotTyping = true;
       currentTypingText = '';  // Ensure no previous text is displayed while regenerating
       currentVideos = [];      // Clear any previous videos
+      currentRedditPosts = []; // Clear any previous Reddit posts
       notifyListeners();
       
       try {
         // Include ALL messages up to but not including the bot message that will be regenerated
         // This ensures proper context is maintained for the bot response
-        final botMessages = messages.sublist(0, nextBotIndex).map((m) => {
+        final botMessages = messages.map((m) => {
           'role': m['sender'] == 'user' ? 'user' : 'assistant',
           'content': m['message'] ?? '',
         }).toList();
@@ -164,14 +200,31 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
         }
         
-        // Update the bot message
-        messages[nextBotIndex]['message'] = response['text'];
-        messages[nextBotIndex]['videos'] = videos;
-        messages[nextBotIndex]['regenerated'] = true; // Mark as regenerated
+        // Process Reddit posts from response
+        List<RedditPostPreview> redditPosts = [];
+        if (response.containsKey('redditPosts')) {
+          try {
+            final postsList = response['redditPosts'] as List<dynamic>;
+            if (postsList.isNotEmpty) {
+              redditPosts = postsList.whereType<RedditPostPreview>().toList();
+            }
+          } catch (e) {
+            print('Error processing Reddit posts: $e');
+          }
+        }
+        
+        // Add the regenerated bot message at the appropriate position
+        messages.insert(editedIndex! + 1, {
+          'sender': 'bot',
+          'message': response['text'],
+          'videos': videos,
+          'redditPosts': redditPosts,
+          'regenerated': true, // Mark as regenerated
+        });
         
         // Remove any subsequent messages as they're now invalid
-        if (nextBotIndex < messages.length - 1) {
-          messages.removeRange(nextBotIndex + 1, messages.length);
+        if (editedIndex! + 2 < messages.length) {
+          messages.removeRange(editedIndex! + 2, messages.length);
         }
         
         // Finish typing
@@ -192,8 +245,16 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         // Handle error
         print('Error updating message: $e');
         isBotTyping = false;
+        
+        // If there was an error, add back the original message
+        if (editedIndex! + 1 <= messages.length) {
+          messages.insert(editedIndex! + 1, botMessage);
+        }
+        
         notifyListeners();
       }
+    } else {
+      notifyListeners();
     }
   }
   
@@ -244,6 +305,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       'sender': 'user', 
       'message': message,
       'videos': <YouTubeVideo>[],
+      'redditPosts': <RedditPostPreview>[],
     });
     notifyListeners();
     
@@ -251,6 +313,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     isBotTyping = true;
     currentTypingText = '';  // Ensure no previous text is displayed while waiting
     currentVideos = [];      // Clear any previous videos
+    currentRedditPosts = []; // Clear any previous reddit posts
     notifyListeners();
     
     try {
@@ -268,10 +331,10 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         'content': m['message'] ?? '',
       }).toList();
       
-      // Get response from bot service with videos
+      // Get response from bot service
       final response = await botService.getResponseWithVideos(message, botMessages);
       
-      // Process videos from response
+      // Process videos from response if using getResponseWithVideos
       List<YouTubeVideo> videos = [];
       if (response.containsKey('videos')) {
         try {
@@ -285,16 +348,50 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         }
       }
       
+      // Process Reddit posts from response
+      List<RedditPostPreview> redditPosts = [];
+      if (response.containsKey('redditPosts')) {
+        try {
+          final postsList = response['redditPosts'] as List<dynamic>;
+          if (postsList.isNotEmpty) {
+            try {
+              for (var i = 0; i < postsList.length; i++) {
+                try {
+                  final post = postsList[i];
+                  if (post is RedditPostPreview) {
+                    redditPosts.add(post);
+                  } else {
+                    print('Post at index $i is not a RedditPostPreview: ${post.runtimeType}');
+                  }
+                } catch (postError) {
+                  print('Error processing individual Reddit post at index $i: $postError');
+                }
+              }
+            } catch (e) {
+              print('Error iterating through Reddit posts: $e');
+            }
+            
+            if (redditPosts.isEmpty && postsList.isNotEmpty) {
+              print('Failed to process any Reddit posts despite having ${postsList.length} items');
+            }
+          }
+        } catch (e) {
+          print('Error processing Reddit posts: $e');
+          print('RedditPosts content: ${response['redditPosts']}');
+        }
+      }
+      
       // Check if this is likely a conversational response
       bool isConversationalResponse = _isLikelyConversationalResponse(message);
       
       // Don't show previously shown videos for conversational responses
       if (isConversationalResponse) {
         videos = [];
+        redditPosts = [];
       }
       
-      // Start typing animation with videos (empty list for conversational responses)
-      startTypingAnimation(response['text'], videos);
+      // Start typing animation with videos and Reddit posts
+      startTypingAnimation(response['text'], videos, redditPosts);
       
       // Save chat to service
       _saveCurrentChat();
@@ -305,6 +402,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         'sender': 'bot', 
         'message': 'Sorry, I encountered an error: $e',
         'videos': <YouTubeVideo>[],
+        'redditPosts': <RedditPostPreview>[],
       });
       notifyListeners();
       
@@ -334,12 +432,13 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     );
   }
   
-  void startTypingAnimation(String response, List<YouTubeVideo> videos) {
+  void startTypingAnimation(String response, List<YouTubeVideo> videos, List<RedditPostPreview> redditPosts) {
     // Reset all typing-related variables to ensure previous response doesn't show
     fullBotResponse = response;
     currentCharIndex = 0;
     currentTypingText = '';  // Clear the current typing text
     currentVideos = videos.isNotEmpty ? videos : [];
+    currentRedditPosts = redditPosts.isNotEmpty ? redditPosts : [];
     
     // Cancel any existing timer
     typingTimer?.cancel();
@@ -368,6 +467,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           'sender': 'bot', 
           'message': fullBotResponse,
           'videos': currentVideos,
+          'redditPosts': currentRedditPosts,
         });
         
         // Save the updated chat
@@ -393,6 +493,20 @@ class ChatInterfaceViewModel extends ChangeNotifier {
               'thumbnailUrl': video.thumbnailUrl,
               'channelTitle': video.channelTitle,
               'publishedAt': video.publishedAt.toIso8601String(),
+            };
+          }
+          return null;
+        }).whereType<Map<String, dynamic>>().toList() ?? [],
+        // Store Reddit post data as serializable objects
+        'redditPosts': (m['redditPosts'] as List<dynamic>?)?.map((post) {
+          if (post is RedditPostPreview) {
+            return {
+              'title': post.title,
+              'subreddit': post.subreddit,
+              'url': post.url,
+              'score': post.score,
+              'commentCount': post.commentCount,
+              'thumbnailUrl': post.thumbnailUrl,
             };
           }
           return null;
@@ -423,6 +537,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     currentChatId = null;
     currentChatTitle = null;
     currentVideos = [];
+    currentRedditPosts = [];
     chatService.setCurrentChat(null);
     notifyListeners();
   }
@@ -463,10 +578,17 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       return; // No user message found to regenerate from
     }
 
+    // Store the current message index before removing it
+    final currentBotMessageIndex = botMessageIndex;
+    
+    // Remove the bot message that will be regenerated
+    final botMessage = messages.removeAt(botMessageIndex);
+    
     // Clear previous typing data and set bot typing state
     isBotTyping = true;
     currentTypingText = '';  // Ensure no previous text is displayed while regenerating
     currentVideos = [];      // Clear any previous videos
+    currentRedditPosts = []; // Clear any previous Reddit posts
     notifyListeners();
     
     try {
@@ -475,7 +597,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       
       // Include ALL messages up to the bot message for complete context
       // This ensures the bot has the full conversation history for better context preservation
-      final botMessages = messages.sublist(0, botMessageIndex).map((m) => {
+      final botMessages = messages.map((m) => {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',
       }).toList();
@@ -496,14 +618,31 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         }
       }
       
-      // Update the bot message
-      messages[botMessageIndex]['message'] = response['text'];
-      messages[botMessageIndex]['videos'] = videos;
-      messages[botMessageIndex]['regenerated'] = true; // Mark as regenerated
+      // Process Reddit posts from response
+      List<RedditPostPreview> redditPosts = [];
+      if (response.containsKey('redditPosts')) {
+        try {
+          final postsList = response['redditPosts'] as List<dynamic>;
+          if (postsList.isNotEmpty) {
+            redditPosts = postsList.whereType<RedditPostPreview>().toList();
+          }
+        } catch (e) {
+          print('Error processing Reddit posts: $e');
+        }
+      }
+      
+      // Add the regenerated bot message back to the list
+      messages.insert(previousUserIndex + 1, {
+        'sender': 'bot',
+        'message': response['text'],
+        'videos': videos,
+        'redditPosts': redditPosts,
+        'regenerated': true, // Mark as regenerated
+      });
       
       // Remove any subsequent messages as they're now invalid
-      if (botMessageIndex < messages.length - 1) {
-        messages.removeRange(botMessageIndex + 1, messages.length);
+      if (previousUserIndex + 2 < messages.length) {
+        messages.removeRange(previousUserIndex + 2, messages.length);
       }
       
       // Finish typing
@@ -524,6 +663,12 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       // Handle error
       print('Error regenerating message: $e');
       isBotTyping = false;
+      
+      // If there was an error, add back the original message
+      if (currentBotMessageIndex <= messages.length) {
+        messages.insert(currentBotMessageIndex, botMessage);
+      }
+      
       notifyListeners();
     }
   }

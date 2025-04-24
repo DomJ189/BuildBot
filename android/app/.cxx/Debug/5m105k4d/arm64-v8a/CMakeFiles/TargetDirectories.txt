@@ -1,0 +1,2 @@
+C:/Users/domin/Build Bot/android/app/.cxx/Debug/5m105k4d/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/domin/Build Bot/android/app/.cxx/Debug/5m105k4d/arm64-v8a/CMakeFiles/rebuild_cache.dir

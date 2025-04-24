@@ -7,9 +7,12 @@ import 'views/chat_history_screen.dart'; // Import the Chat History Screen
 import 'views/settings_screen.dart'; 
 import 'package:provider/provider.dart';
 import 'services/chat_service.dart';
+import 'services/bot_service.dart';
 import 'providers/theme_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'viewmodels/account_details_viewmodel.dart';
+import 'services/data_retention_service.dart'; // Import DataRetentionService
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Entry point of the application
 void main() async {
@@ -17,12 +20,27 @@ void main() async {
   await dotenv.load(fileName: ".env"); // Load environment variables
   await Firebase.initializeApp(); // Initialize Firebase
   
+  // Get API credentials from environment variables
+  final redditClientId = dotenv.env['REDDIT_CLIENT_ID'] ?? '';
+  final redditClientSecret = dotenv.env['REDDIT_CLIENT_SECRET'] ?? '';
+  final perplexityApiKey = dotenv.env['PERPLEXITY_API_KEY'] ?? '';
+  
   // Initialize services
   final chatService = ChatService();
+  final botService = BotService(
+    perplexityApiKey,
+    redditClientId: redditClientId,
+    redditClientSecret: redditClientSecret,
+  );
+  final dataRetentionService = DataRetentionService(); // Create DataRetentionService
+  
   await chatService.loadTypingSpeedPreference();
   
   // Initialize auto-deletion
   chatService.initializeAutoDeletion();
+  
+  // Also apply data retention policy once at startup
+  dataRetentionService.applyDataRetentionPolicy();
   
   // Listen for auth state changes
   FirebaseAuth.instance.authStateChanges().listen((User? user) async {
@@ -31,8 +49,22 @@ void main() async {
       final viewModel = AccountDetailsViewModel();
       await viewModel.checkAndMigrateUserData();
       
+      // Set default auto-deletion to "Never delete" for all users
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auto_deletion_period', 'Never delete');
+      print('Set auto-deletion period to "Never delete"');
+      
       // Initialize chat history for the logged-in user
       await chatService.initializeChatHistory();
+      
+      // Apply data retention policy when user logs in
+      dataRetentionService.applyDataRetentionPolicy();
+      
+      // Explicitly run auto-deletion for any chats older than the setting
+      chatService.runAutoDeletionCheck();
+      
+      print('User logged in: ${user.email}');
+      print('Chat history initialized and auto-deletion checks running');
     }
   });
   
@@ -40,20 +72,21 @@ void main() async {
     MultiProvider(
       providers: [
         Provider<ChatService>(create: (_) => chatService),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()), //Provider for the theme provider
+        Provider<BotService>(create: (_) => botService),
+        Provider<DataRetentionService>(create: (_) => dataRetentionService),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
             title: 'BuildBot',
-            theme: Provider.of<ThemeProvider>(context).currentTheme, // Set the theme for the app
-            initialRoute: '/', // Initial route for the app
+            theme: Provider.of<ThemeProvider>(context).currentTheme,
+            initialRoute: '/',
             routes: {
-              '/': (context) => LoginScreen(), // Login Screen
-              '/main': (context) => MainWrapper(), // Main Wrapper
+              '/': (context) => LoginScreen(),
+              '/main': (context) => MainWrapper(),
             },
             onGenerateRoute: (settings) {
-              // Handle all other routes
               return MaterialPageRoute(
                 builder: (context) => MainWrapper(currentIndex: getIndex(settings.name)),
               );

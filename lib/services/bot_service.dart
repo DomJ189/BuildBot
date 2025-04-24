@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'youtube_service.dart';
+import 'tech_news_service.dart';
+import 'gpu_recommendation_service.dart';
 import 'dart:math' as Math;
+import '../models/reddit_post_preview.dart';
 
 // Handles communication with the Perplexity AI API for generating responses
 class BotService {
@@ -9,9 +12,11 @@ class BotService {
   String apiKey; 
   final List<Map<String, dynamic>> _conversationHistory = []; // Stores conversation history
   final YouTubeService _youtubeService = YouTubeService();
+  late final TechNewsService _techNewsService;
+  final GPURecommendationService _gpuService = GPURecommendationService();
 
   // Constructor to initialize the BotService with the provided API key
-  BotService(this.apiKey) {
+  BotService(this.apiKey, {required String redditClientId, required String redditClientSecret}) {
     // Try to load API key from environment if not provided
     if (apiKey == 'your-api-key') {
       final envKey = const String.fromEnvironment('PERPLEXITY_API_KEY');
@@ -19,6 +24,10 @@ class BotService {
         apiKey = envKey;
       }
     }
+    _techNewsService = TechNewsService(
+      redditClientId: redditClientId,
+      redditClientSecret: redditClientSecret,
+    );
   }
 
   // Removes citation numbers in square brackets from text
@@ -33,11 +42,49 @@ class BotService {
     _conversationHistory.clear();
   }
 
-  // Fetches a response from the Perplexity AI API based on the provided prompt
-  Future<String> fetchResponse(String prompt) async {
+  // Enhanced fetchResponse method to include tech news, Reddit troubleshooting, and GPU recommendations
+  Future<Map<String, dynamic>> fetchResponse(String prompt) async {
     try {
       // Add user message to history
       _conversationHistory.add({'role': 'user', 'content': prompt});
+      
+      // Check if the prompt is related to tech news or troubleshooting
+      String additionalContext = '';
+      List<dynamic> redditPosts = [];
+      
+      // Check for GPU recommendation requests
+      if (_isGPURecommendationQuery(prompt)) {
+        final gpuInfo = await _getGPURecommendations(prompt);
+        if (gpuInfo.isNotEmpty) {
+          additionalContext += '\n\n$gpuInfo';
+        }
+      }
+      
+      if (prompt.toLowerCase().contains('news') || 
+          prompt.toLowerCase().contains('update') ||
+          prompt.toLowerCase().contains('latest')) {
+        final news = await _techNewsService.getLatestTechNews();
+        if (news.isNotEmpty) {
+          additionalContext += '\n\nRecent Tech News:\n';
+          for (var article in news.take(3)) {
+            additionalContext += '- [${article.title}](${article.url}) (${article.source})\n';
+          }
+        }
+      }
+      
+      if (prompt.toLowerCase().contains('problem') ||
+          prompt.toLowerCase().contains('issue') ||
+          prompt.toLowerCase().contains('help') ||
+          prompt.toLowerCase().contains('trouble') ||
+          prompt.toLowerCase().contains('reddit') ||
+          prompt.toLowerCase().contains('post') ||
+          prompt.toLowerCase().contains('r/')) {
+        final posts = await _techNewsService.searchRedditForTroubleshooting(prompt);
+        if (posts.isNotEmpty) {
+          additionalContext += '\n\nFound relevant discussions on Reddit that might help with your issue.';
+          redditPosts = posts.take(3).toList();
+        }
+      }
       
       // Define the URL for the Perplexity API endpoint
       final url = Uri.parse('https://api.perplexity.ai/chat/completions');
@@ -46,7 +93,14 @@ class BotService {
       final messages = [
         {
           'role': 'system',
-          'content': 'You are a helpful PC-building maintenance and configuration assistant. Provide responses in markdown format. Maintain context from previous messages in the conversation.' 
+          'content': 'You are a helpful PC-building maintenance and configuration assistant. '
+              'Provide responses in markdown format. Maintain context from previous messages in the conversation. '
+              'Focus on providing accurate and concise information about PC hardware, software, and troubleshooting. '
+              'Pay close attention to the conversation context when responding to follow-up questions. '
+              'For example, If a user asks a simple follow-up like "what about under \$500?" after discussing GPUs, '
+              'interpret it as a continuation of the GPU discussion rather than switching to a new topic. '
+              'Follow-up questions with brief context should maintain the subject of the previous exchange.'
+              '$additionalContext'
         },
         // Add all conversation history
         ..._conversationHistory,
@@ -80,7 +134,11 @@ class BotService {
           _conversationHistory.removeRange(0, _conversationHistory.length - 10);
         }
         
-        return _removeCitations(content); // Remove citations and return
+        // Return both the text response and any reddit posts
+        return {
+          'text': _addRedditPostsMessage(_removeCitations(content), redditPosts, prompt),
+          'redditPosts': redditPosts,
+        };
       } else {
         // Log error details if the response is not successful
         print('Error: ${response.statusCode}');
@@ -232,6 +290,25 @@ class BotService {
         _conversationHistory.add({'role': 'user', 'content': message});
       }
       
+      // Check for Reddit-related queries
+      List<dynamic> redditPosts = [];
+      if (message.toLowerCase().contains('reddit') || 
+          message.toLowerCase().contains('post') || 
+          message.toLowerCase().contains('r/') ||
+          message.toLowerCase().contains('problem') ||
+          message.toLowerCase().contains('issue') ||
+          message.toLowerCase().contains('help') ||
+          message.toLowerCase().contains('trouble')) {
+        try {
+          final posts = await _techNewsService.searchRedditForTroubleshooting(message);
+          if (posts.isNotEmpty) {
+            redditPosts = posts.toList(); // Use .toList() to make a copy
+          }
+        } catch (e) {
+          print('Error fetching Reddit posts: $e');
+        }
+      }
+      
       // Check if user is giving negative feedback about videos
       final isNegativeFeedback = _isNegativeFeedbackOnVideos(message);
       
@@ -250,8 +327,9 @@ class BotService {
         _conversationHistory.add({'role': 'assistant', 'content': response});
         
         return {
-          'text': response,
+          'text': _addRedditPostsMessage(response, redditPosts, message),
           'videos': betterVideos,
+          'redditPosts': redditPosts,
         };
       }
       
@@ -264,8 +342,9 @@ class BotService {
         _conversationHistory.add({'role': 'assistant', 'content': conversationalResponse});
         
         return {
-          'text': conversationalResponse,
+          'text': _addRedditPostsMessage(conversationalResponse, redditPosts, message),
           'videos': <YouTubeVideo>[],
+          'redditPosts': redditPosts,
         };
       }
       
@@ -308,8 +387,9 @@ class BotService {
         _conversationHistory.add({'role': 'assistant', 'content': videoResponse});
         
         return {
-          'text': videoResponse,
+          'text': _addRedditPostsMessage(videoResponse, redditPosts, message),
           'videos': videos,
+          'redditPosts': redditPosts,
         };
       }
       
@@ -372,8 +452,9 @@ class BotService {
         _conversationHistory.add({'role': 'assistant', 'content': videoResponse});
         
         return {
-          'text': videoResponse,
+          'text': _addRedditPostsMessage(videoResponse, redditPosts, message),
           'videos': videos,
+          'redditPosts': redditPosts,
         };
       }
       
@@ -387,10 +468,11 @@ class BotService {
           'role': 'system',
           'content': 'You are a helpful PC-building maintenance and configuration assistant. '
               'Provide responses in markdown format. Maintain context from previous messages in the conversation. '
-              'When appropriate, proactively ask if the user would like to see video tutorials or demonstrations '
-              'related to their question. For example, after explaining how to install Windows, you might say '
-              '"Would you like me to suggest some video tutorials that demonstrate this process?" or '
-              '"I can recommend some videos that show this in action if you\'d like to see a visual demonstration."'
+              'Focus on providing accurate and concise information about PC hardware, software, and troubleshooting. '
+              'Pay close attention to the conversation context when responding to follow-up questions. '
+              'For example, If a user asks a simple follow-up like "what about under \$500?" after discussing GPUs, '
+              'interpret it as a continuation of the GPU discussion rather than switching to a new topic. '
+              'Follow-up questions with brief context should maintain the subject of the previous exchange.'
         },
         // Add all conversation history
         ..._conversationHistory,
@@ -424,9 +506,7 @@ class BotService {
           _conversationHistory.removeRange(0, _conversationHistory.length - 10);
         }
         
-        // Determine if we should suggest videos based on the message content
-        bool shouldSuggestVideos = _shouldSuggestVideos(content);
-        
+        // Create a response with videos
         String processedContent = content;
         
         // Check if we've already suggested videos in the last few messages
@@ -446,17 +526,19 @@ class BotService {
         // 2. The content doesn't already contain a video suggestion
         // 3. We haven't recently suggested videos
         // 4. The content doesn't already contain recommendations for videos
-        if (shouldSuggestVideos && 
+        // REMOVED: No longer automatically add video suggestion at the end
+        /* if (shouldSuggestVideos && 
             !_containsVideoSuggestion(processedContent) && 
             !alreadySuggestedVideos &&
             !_containsVideoRecommendation(processedContent)) {
           processedContent += "\n\nWould you like me to suggest some video tutorials that demonstrate this in more detail?";
-        }
+        } */
         
         // Important change: Don't include videos in the initial response
         return {
-          'text': _removeCitations(processedContent),
+          'text': _addRedditPostsMessage(_removeCitations(processedContent), redditPosts, message),
           'videos': <YouTubeVideo>[],
+          'redditPosts': redditPosts,
         };
       } else {
         // Log error details if the response is not successful
@@ -1067,5 +1149,202 @@ class BotService {
     }
     
     return topic;
+  }
+
+  // Check if a prompt is asking for GPU recommendations
+  bool _isGPURecommendationQuery(String prompt) {
+    final lowerPrompt = prompt.toLowerCase();
+    
+    final gpuKeywords = [
+      'gpu', 'graphics card', 'video card', 'rtx', 'gtx', 'rx', 'radeon',
+      'geforce', 'best gpu', 'recommend gpu', 'suggest gpu', 'graphics',
+      'gpu recommendation', 'graphics card recommendation', 'good gpu for',
+      'best graphics card', 'budget gpu', 'high-end gpu'
+    ];
+    
+    // Check for direct mentions of GPU-related terms
+    final containsGpuKeyword = gpuKeywords.any((keyword) => lowerPrompt.contains(keyword));
+    
+    // Also check for budget follow-up questions when previous context was about GPUs
+    final isBudgetFollowUp = _isBudgetFollowUpQuery(prompt);
+    
+    return containsGpuKeyword || isBudgetFollowUp;
+  }
+  
+  // Detect if a query is a follow-up budget question related to previous GPU discussion
+  bool _isBudgetFollowUpQuery(String prompt) {
+    final lowerPrompt = prompt.toLowerCase().trim();
+    
+    // Check if this is a budget-related follow-up like "what about under \$500?"
+    final budgetFollowUpPatterns = [
+      RegExp(r'^(?:what|how)?\s*about\s+under\s+\$?(\d+)', caseSensitive: false),
+      RegExp(r'^(?:what|how)?\s*about\s+(\d+)', caseSensitive: false),
+      RegExp(r'^under\s+\$?(\d+)', caseSensitive: false),
+      RegExp(r'^(?:for|with)\s+\$?(\d+)', caseSensitive: false),
+      RegExp(r'^(?:what|which)(?:\s+is|\s+are)\s+the\s+best\s+(?:for|under)\s+\$?(\d+)', caseSensitive: false)
+    ];
+    
+    final isSimpleBudgetQuery = budgetFollowUpPatterns.any((pattern) => pattern.hasMatch(lowerPrompt));
+    
+    // Only consider it a GPU follow-up if recent conversation was about GPUs
+    if (isSimpleBudgetQuery && _conversationHistory.length >= 2) {
+      // Check the last bot response for GPU-related content
+      for (int i = _conversationHistory.length - 1; i >= 0; i--) {
+        final entry = _conversationHistory[i];
+        if (entry['role'] == 'assistant') {
+          final content = entry['content'].toString().toLowerCase();
+          final containsGpuContent = content.contains('gpu') || 
+                                    content.contains('graphics card') || 
+                                    content.contains('radeon') || 
+                                    content.contains('geforce') ||
+                                    content.contains('rtx') ||
+                                    content.contains('gtx');
+          
+          // If the last bot message contained GPU content, this is likely a follow-up
+          if (containsGpuContent) {
+            return true;
+          }
+          break; // Only check the most recent bot message
+        }
+      }
+    }
+    
+    return false;
+  }
+  
+  // Extract GPU recommendations based on the prompt
+  Future<String> _getGPURecommendations(String prompt) async {
+    final lowerPrompt = prompt.toLowerCase();
+    
+    try {
+      // First, check for budget follow-up queries
+      double budget = 0.0;
+      
+      // Check various patterns for budget queries
+      final budgetPatterns = [
+        // Standard budget patterns
+        RegExp(r'(?:under|less than|below|max|budget of|budget|for|around|about)\s*\$?(\d+)', caseSensitive: false),
+        // Follow-up patterns like "what about $500" or "what about under $500"
+        RegExp(r'(?:what|how)?\s*about\s+(?:under\s+)?\$?(\d+)', caseSensitive: false),
+        // Direct amount patterns like "under $500" or "$500"
+        RegExp(r'under\s+\$?(\d+)', caseSensitive: false),
+        RegExp(r'(?:^|\s)\$?(\d+)(?:\s|$)', caseSensitive: false)
+      ];
+      
+      // Try each pattern
+      for (final pattern in budgetPatterns) {
+        final match = pattern.firstMatch(lowerPrompt);
+        if (match != null) {
+          final budgetStr = match.group(1) ?? '';
+          final parsedBudget = double.tryParse(budgetStr) ?? 0.0;
+          if (parsedBudget > 0) {
+            budget = parsedBudget;
+            break;
+          }
+        }
+      }
+      
+      // If budget was found, get recommendations
+      if (budget > 0) {
+        final recommendations = await _gpuService.getRecommendationsForBudget(budget);
+        
+        if (recommendations.isNotEmpty) {
+          String result = '### GPU Recommendations Under \$$budget\n\n';
+          
+          for (var i = 0; i < recommendations.length; i++) {
+            final gpu = recommendations[i];
+            result += '${i + 1}. **${gpu.name}** - \$${gpu.price.toStringAsFixed(0)}\n';
+            result += '   - Performance score: ${gpu.benchmark}\n';
+            result += '   - Value score: ${gpu.value}\n';
+            result += '   - VRAM: ${gpu.vram}\n';
+            result += '   - Power: ${gpu.wattage}\n';
+            result += '   - [More details](${gpu.url})\n\n';
+          }
+          
+          return result;
+        }
+      }
+      
+      // Check for similar GPU requests
+      final similarMatch = RegExp(r'(?:similar to|like|compared to|vs|versus|compare)\s+((?:rtx|gtx|rx)\s+\d{4}(?:\s+\w+)?)', caseSensitive: false).firstMatch(lowerPrompt);
+      
+      if (similarMatch != null) {
+        final gpuModel = similarMatch.group(1) ?? '';
+        
+        if (gpuModel.isNotEmpty) {
+          final similarGpus = await _gpuService.findSimilarGPUs(gpuModel);
+          
+          if (similarGpus.isNotEmpty) {
+            String result = '### GPUs Similar to $gpuModel\n\n';
+            
+            for (var i = 0; i < similarGpus.length; i++) {
+              final gpu = similarGpus[i];
+              result += '${i + 1}. **${gpu.name}** - \$${gpu.price.toStringAsFixed(0)}\n';
+              result += '   - Performance score: ${gpu.benchmark}\n';
+              result += '   - Value score: ${gpu.value}\n';
+              result += '   - VRAM: ${gpu.vram}\n';
+              result += '   - Power: ${gpu.wattage}\n';
+              result += '   - [More details](${gpu.url})\n\n';
+            }
+            
+            return result;
+          }
+        }
+      }
+      
+      // If no specific request type detected but GPU-related query, return top value GPUs
+      if (_isGPURecommendationQuery(prompt)) {
+        final topGpus = await _gpuService.fetchBestValueGPUs();
+        
+        if (topGpus.isNotEmpty) {
+          final bestGpus = topGpus.take(3).toList();
+          
+          String result = '### Current Best Value GPUs\n\n';
+          
+          for (var i = 0; i < bestGpus.length; i++) {
+            final gpu = bestGpus[i];
+            result += '${i + 1}. **${gpu.name}** - \$${gpu.price.toStringAsFixed(0)}\n';
+            result += '   - Performance score: ${gpu.benchmark}\n';
+            result += '   - Value score: ${gpu.value}\n';
+            result += '   - VRAM: ${gpu.vram}\n';
+            result += '   - Power: ${gpu.wattage}\n';
+            result += '   - [More details](${gpu.url})\n\n';
+          }
+          
+          return result;
+        }
+      }
+      
+      return '';
+    } catch (e) {
+      print('Error generating GPU recommendations: $e');
+      return '';
+    }
+  }
+
+  // Helper method to add a message about included Reddit posts when appropriate
+  String _addRedditPostsMessage(String text, List<dynamic> redditPosts, String userMessage) {
+    if (redditPosts.isEmpty) {
+      return text;
+    }
+    
+    // If the user explicitly asked for Reddit posts, add a clear message
+    final lowerUserMessage = userMessage.toLowerCase();
+    final isExplicitRedditRequest = lowerUserMessage.contains('reddit') || 
+                                   lowerUserMessage.contains('post') ||
+                                   lowerUserMessage.contains('r/');
+    
+    if (isExplicitRedditRequest) {
+      return "$text\n\n**Here are some relevant Reddit posts about this topic that you might find helpful. You can click on them to view the full discussions.**";
+    } 
+    // For troubleshooting queries, add a more subtle message
+    else if (lowerUserMessage.contains('problem') || 
+            lowerUserMessage.contains('issue') || 
+            lowerUserMessage.contains('help') ||
+            lowerUserMessage.contains('trouble')) {
+      return "$text\n\n**I've found some Reddit discussions about similar issues that might be helpful. You can check them out below.**";
+    }
+    
+    return text;
   }
 } 

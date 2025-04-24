@@ -6,6 +6,8 @@ import '../providers/theme_provider.dart';
 import 'dart:async';
 import '../viewmodels/chat_interface_viewmodel.dart';
 import '../widgets/youtube_video_player.dart';
+import '../widgets/reddit_link_card.dart';
+import '../models/reddit_post_preview.dart';
 import '../services/youtube_service.dart';
 
 class ChatInterface extends StatefulWidget {
@@ -266,9 +268,9 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     return ListView.builder(
       controller: _scrollController,
       padding: EdgeInsets.only(left: 16, right: 16, top: 64, bottom: 8),
-      itemCount: viewModel.messages.length + 1, // +1 for typing indicator
+      itemCount: viewModel.messages.length + (viewModel.isBotTyping ? 1 : 0), // +1 for typing indicator when bot is typing
       itemBuilder: (context, index) {
-        // Show typing indicator
+        // Show typing indicator at the end when bot is typing
         if (viewModel.isBotTyping && index == viewModel.messages.length) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,6 +310,31 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                     ],
                   ),
                 ),
+              // Show Reddit posts during typing if available
+              if (viewModel.currentRedditPosts.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Relevant Reddit Discussions:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      ...viewModel.currentRedditPosts.map((post) => 
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: RedditLinkCard(post: post),
+                        )
+                      ).toList(),
+                    ],
+                  ),
+                ),
             ],
           );
         }
@@ -331,15 +358,23 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
             final videosList = message['videos'] as List<dynamic>?;
             final hasVideos = videosList != null && videosList.isNotEmpty;
             
+            // For bot messages, check if there are Reddit posts
+            final redditPostsList = message['redditPosts'] as List<dynamic>?;
+            final hasRedditPosts = redditPostsList != null && redditPostsList.isNotEmpty;
+            
             // Check if this is likely a response to a conversational message
             final isConversational = _isLikelyConversationalResponse(message['message'] ?? '');
             
-            // Check if the previous message was the one showing videos
+            // Check if the previous message was the one showing videos or reddit posts
             bool previousMessageHadVideos = false;
+            bool previousMessageHadRedditPosts = false;
             if (index > 0) {
               final prevMessage = viewModel.messages[index - 1];
               final prevVideosList = prevMessage['videos'] as List<dynamic>?;
               previousMessageHadVideos = prevVideosList != null && prevVideosList.isNotEmpty;
+              
+              final prevRedditPostsList = prevMessage['redditPosts'] as List<dynamic>?;
+              previousMessageHadRedditPosts = prevRedditPostsList != null && prevRedditPostsList.isNotEmpty;
             }
             
             return Column(
@@ -351,6 +386,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                   regenerated: message['regenerated'] == true,
                   messageIndex: index,
                 ),
+                
                 // Show videos if available and not a conversational response after videos
                 if (hasVideos && !(isConversational && previousMessageHadVideos))
                   Padding(
@@ -371,6 +407,32 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
                             child: YouTubeVideoPlayer(video: video as YouTubeVideo),
+                          )
+                        ).toList(),
+                      ],
+                    ),
+                  ),
+                
+                // Show Reddit posts if available and not a conversational response after posts
+                if (hasRedditPosts && !(isConversational && previousMessageHadRedditPosts))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Relevant Reddit Discussions:",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        ...redditPostsList!.map((post) => 
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: RedditLinkCard(post: post as RedditPostPreview),
                           )
                         ).toList(),
                       ],
@@ -482,50 +544,48 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     );
   }
   
-  // Add a method to show edit dialog
+  // Show dialog to edit a message
   void _showEditDialog(String message) {
-    // Find the index of this message in the viewModel
-    final index = _viewModel.messages.indexWhere(
+    final messageIndex = _viewModel.messages.indexWhere(
       (m) => m['sender'] == 'user' && m['message'] == message
     );
     
-    if (index == -1) return;
+    if (messageIndex < 0) return; // Message not found
     
-    // Start editing mode in the view model
-    _viewModel.startEditingMessage(index);
-    
-    // Set up edit controller
+    // Set up the edit controller with current message
     _editController.text = message;
+    
+    // Start editing this message in the view model
+    _viewModel.startEditingMessage(messageIndex);
     
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (context) {
+        final themeProvider = Provider.of<ThemeProvider>(context);
+        final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
+        
         return AlertDialog(
-          title: Text('Edit Message'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Editing this message will regenerate the bot\'s response.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
+          backgroundColor: isDarkTheme ? Color(0xFF333333) : Colors.white,
+          title: Text(
+            'Edit Message',
+            style: TextStyle(
+              color: themeProvider.currentTheme.textTheme.titleLarge?.color,
+            ),
+          ),
+          content: TextField(
+            controller: _editController,
+            autofocus: true,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'Edit your message',
+              hintStyle: TextStyle(
+                color: isDarkTheme ? Colors.grey[400] : Colors.grey[600],
               ),
-              SizedBox(height: 12),
-              TextField(
-                controller: _editController,
-                decoration: InputDecoration(
-                  hintText: 'Edit your message...',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 5,
-                autofocus: true,
-              ),
-            ],
+            ),
+            style: TextStyle(
+              color: themeProvider.currentTheme.textTheme.bodyLarge?.color,
+            ),
+            maxLines: 5,
           ),
           actions: [
             TextButton(
@@ -573,15 +633,13 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: isDarkTheme ? Colors.blue[700] : Colors.blue[300],
                   shape: BoxShape.circle,
+                  color: isDarkTheme ? Colors.blue[700] : Colors.blue[300],
                 ),
-                child: Center(
-                  child: Icon(
-                    Icons.smart_toy,
-                    size: 20,
-                    color: Colors.white,
-                  ),
+                clipBehavior: Clip.antiAlias,
+                child: Image.asset(
+                  'assets/images/BuildBotLogo.png',
+                  fit: BoxFit.cover,
                 ),
               ),
               SizedBox(width: 8),
@@ -656,6 +714,9 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                         onPressed: () {
                           final viewModel = Provider.of<ChatInterfaceViewModel>(context, listen: false);
                           viewModel.regenerateMessage(messageIndex);
+                          
+                          // Scroll to show typing indicator
+                          Future.delayed(Duration(milliseconds: 100), _scrollToBottom);
                         },
                         tooltip: 'Regenerate response',
                         padding: EdgeInsets.zero,

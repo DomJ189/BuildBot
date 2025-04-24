@@ -45,13 +45,12 @@ class AboutBuildBotScreen extends StatelessWidget {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: isDarkTheme ? Color(0xFF333333) : themeProvider.currentTheme.primaryColor,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.computer,
-                      size: 60,
-                      color: Colors.white,
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.asset(
+                      'assets/images/BuildBotLogo.png',
+                      fit: BoxFit.cover,
                     ),
                   ),
                   SizedBox(height: 16),

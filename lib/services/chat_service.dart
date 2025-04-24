@@ -67,7 +67,7 @@ class ChatService {
     return prefs.getBool('save_chat_history') ?? true; // Default to true if not set
   }
 
-  // Modify your saveChat method to check the preference
+  // Modify your saveChat method to ensure proper timestamp handling
   Future<void> saveChat(Chat chat) async {
     // Check if chat saving is enabled
     final saveChatHistory = await isChatSavingEnabled();
@@ -85,13 +85,19 @@ class ChatService {
     // Use sanitized title as document ID if available, otherwise use chat.id
     final docId = chat.title.isNotEmpty ? _sanitizeDocumentId(chat.title) : chat.id;
     
+    // Create a data map with the proper timestamp format
+    final data = chat.toMap();
+    
+    // Add a Firestore timestamp field to ensure proper date comparison
+    data['firestoreTimestamp'] = FieldValue.serverTimestamp();
+    
     await _firestore
         .collection('users')
         .doc(user.email)
         .collection('chats')
         .doc(docId)
         .set({
-          ...chat.toMap(),
+          ...data,
           'docId': docId, // Store the document ID for reference
         });
     
@@ -263,19 +269,20 @@ class ChatService {
     }
   }
 
-  // Modify your createChat method
+  // Modify your createChat method to ensure proper timestamp handling
   Future<Chat> createChat(String title) async {
     final saveChatHistory = await isChatSavingEnabled();
     
     // Generate a unique ID for the chat
     final chatId = DateTime.now().millisecondsSinceEpoch.toString();
     
-    // Create the chat object
+    // Create the chat object with the current time
+    final now = DateTime.now();
     final chat = Chat(
       id: chatId,
       title: title,
       messages: [],
-      createdAt: DateTime.now(),
+      createdAt: now,
       isPinned: false,
     );
 
@@ -286,13 +293,17 @@ class ChatService {
         // Use sanitized title as document ID if available, otherwise use chatId
         final docId = title.isNotEmpty ? _sanitizeDocumentId(title) : chatId;
         
+        // Convert chat to map and add server timestamp
+        final data = chat.toMap();
+        data['firestoreTimestamp'] = FieldValue.serverTimestamp();
+        
         await _firestore
             .collection('users')
             .doc(user.email)
             .collection('chats')
             .doc(docId)
             .set({
-              ...chat.toMap(),
+              ...data,
               'docId': docId, // Store the document ID for reference
             });
       }
@@ -382,9 +393,9 @@ class ChatService {
 
   // Add these properties to the ChatService class
   Timer? _autoDeletionTimer;
-  final Duration _checkInterval = Duration(hours: 6); // Check every 6 hours
+  final Duration _checkInterval = Duration(minutes: 1); // Check every minute instead of 6 hours
 
-  // Add this method to initialize auto-deletion
+  // Update this method to initialize auto-deletion
   void initializeAutoDeletion() {
     // Cancel any existing timer
     _autoDeletionTimer?.cancel();
@@ -397,16 +408,29 @@ class ChatService {
       _performAutoDeletion();
     });
   }
-
-  // Add this method to perform the auto-deletion
+  
+  // Update this method to perform the auto-deletion
   Future<void> _performAutoDeletion() async {
     try {
       // Get the current auto-deletion period setting
       final prefs = await SharedPreferences.getInstance();
-      final periodSetting = prefs.getString('auto_deletion_period') ?? '30 days';
+      // Force "Never delete" as default regardless of what's in preferences
+      String periodSetting = prefs.getString('auto_deletion_period') ?? 'Never delete';
+      
+      // Set to "Never delete" if for some reason it's set to an invalid value
+      if (![
+        'Never delete', '24 hours', '15 days', '30 days', '60 days', '90 days'
+      ].contains(periodSetting)) {
+        periodSetting = 'Never delete';
+        await prefs.setString('auto_deletion_period', periodSetting);
+        print('Corrected invalid auto-deletion period to "Never delete"');
+      }
+      
+      print('Auto-deletion check running with period: $periodSetting');
       
       // If set to never delete, exit early
       if (periodSetting == 'Never delete') {
+        print('Auto-deletion is disabled (set to "Never delete")');
         return;
       }
       
@@ -416,50 +440,92 @@ class ChatService {
       
       if (periodSetting == '24 hours') {
         cutoffDate = now.subtract(Duration(hours: 24));
+        print('Using 24 hour deletion period, cutoff: $cutoffDate');
       } else if (periodSetting == '15 days') {
         cutoffDate = now.subtract(Duration(days: 15));
+        print('Using 15 day deletion period, cutoff: $cutoffDate');
       } else if (periodSetting == '30 days') {
         cutoffDate = now.subtract(Duration(days: 30));
+        print('Using 30 day deletion period, cutoff: $cutoffDate');
       } else if (periodSetting == '60 days') {
         cutoffDate = now.subtract(Duration(days: 60));
+        print('Using 60 day deletion period, cutoff: $cutoffDate');
       } else if (periodSetting == '90 days') {
         cutoffDate = now.subtract(Duration(days: 90));
+        print('Using 90 day deletion period, cutoff: $cutoffDate');
       } else {
         // Default to 30 days if setting is unrecognized
         cutoffDate = now.subtract(Duration(days: 30));
+        print('Unrecognized period setting: $periodSetting, defaulting to 30 days');
       }
+      
+      print('Cutoff date for deletion: $cutoffDate');
       
       // Get the user's email
       final userEmail = _getUserDocId();
-      if (userEmail == null) return;
-      
-      // Query for chats older than the cutoff date
-      final querySnapshot = await _firestore
-          .collection('users')
-          .doc(userEmail)
-          .collection('chats')
-          .where('createdAt', isLessThan: cutoffDate)
-          .get();
-      
-      // If no chats to delete, exit
-      if (querySnapshot.docs.isEmpty) {
+      if (userEmail == null) {
+        print('No user logged in, skipping auto-deletion');
         return;
       }
       
+      // Get all chats to ensure accuracy
+      final allChats = await _firestore
+          .collection('users')
+          .doc(userEmail)
+          .collection('chats')
+          .get();
+      
+      print('Found ${allChats.docs.length} total chats to check for deletion');
+      
+      // Find documents to delete by checking their dates manually
+      List<DocumentSnapshot> docsToDelete = [];
+      
+      for (var doc in allChats.docs) {
+        try {
+          final data = doc.data() as Map<String, dynamic>;
+          print('Checking chat: ${data['title'] ?? 'Untitled'} (id: ${data['id'] ?? 'unknown'})');
+          
+          final chatDateStr = data['createdAt'] as String?;
+          if (chatDateStr != null) {
+            final chatDate = DateTime.parse(chatDateStr);
+            print('Chat date: $chatDate, cutoff: $cutoffDate, is before: ${chatDate.isBefore(cutoffDate)}');
+            
+            if (chatDate.isBefore(cutoffDate)) {
+              docsToDelete.add(doc);
+              print('Adding chat for deletion: ${data['title']} created at $chatDate');
+            }
+          } else {
+            print('No createdAt date found for chat: ${data['title'] ?? 'Untitled'}');
+          }
+        } catch (e) {
+          print('Error processing document date: $e');
+        }
+      }
+      
+      // If no chats to delete, exit
+      if (docsToDelete.isEmpty) {
+        print('No chats found to delete based on the cutoff date');
+        return;
+      }
+      
+      print('Preparing to delete ${docsToDelete.length} chats...');
+      
       // Delete the old chats in a batch
       final batch = _firestore.batch();
-      for (var doc in querySnapshot.docs) {
+      for (var doc in docsToDelete) {
         batch.delete(doc.reference);
+        final data = doc.data() as Map<String, dynamic>;
+        print('Adding deletion operation for chat: ${data['title'] ?? 'Untitled'}');
       }
       
       // Commit the batch deletion
       await batch.commit();
       
-      // Log the deletion (optional)
-      print('Auto-deleted ${querySnapshot.docs.length} chats older than $periodSetting');
+      // Log the deletion
+      print('Successfully auto-deleted ${docsToDelete.length} chats older than $periodSetting');
       
-      // Notify listeners that chats have been deleted
-      _chatStreamController.add(await getChats().first);
+      // Refresh the chat list after deletion
+      initializeChatHistory();
       
     } catch (e) {
       print('Error performing auto-deletion: $e');
@@ -479,5 +545,11 @@ class ChatService {
   void dispose() {
     _autoDeletionTimer?.cancel();
     _chatStreamController.close();
+  }
+
+  // Add this method to run auto-deletion check manually
+  Future<void> runAutoDeletionCheck() async {
+    print('Manually triggering auto-deletion check...');
+    return _performAutoDeletion();
   }
 } 

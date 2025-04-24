@@ -13,7 +13,10 @@ class DataControlsScreen extends StatefulWidget {
 
 class _DataControlsScreenState extends State<DataControlsScreen> {
   bool _saveHistory = true;
-  String _autoDeletionPeriod = '30 days';
+  String _autoDeletionPeriod = 'Never delete';
+  // Track original values to check for changes
+  String _originalAutoDeletionPeriod = 'Never delete';
+  bool _originalSaveHistory = true;
   
   @override
   void initState() {
@@ -28,11 +31,21 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
     // Load saved preferences
     final saveHistory = await chatService.isChatSavingEnabled();
     final prefs = await SharedPreferences.getInstance();
-    final autoDeletionPeriod = prefs.getString('auto_deletion_period') ?? '30 days';
+    
+    // Ensure the auto-deletion period is 'Never delete' by default
+    String autoDeletionPeriod;
+    if (!prefs.containsKey('auto_deletion_period')) {
+      autoDeletionPeriod = 'Never delete';
+      await prefs.setString('auto_deletion_period', autoDeletionPeriod);
+    } else {
+      autoDeletionPeriod = prefs.getString('auto_deletion_period') ?? 'Never delete';
+    }
     
     setState(() {
       _saveHistory = saveHistory;
+      _originalSaveHistory = saveHistory;
       _autoDeletionPeriod = autoDeletionPeriod;
+      _originalAutoDeletionPeriod = autoDeletionPeriod;
     });
   }
   
@@ -154,7 +167,7 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
                                     setState(() {
                                       _saveHistory = value;
                                     });
-                                    // TODO: Save this preference
+                                    // No longer saving immediately - will be saved when user taps Save Settings
                                   },
                                   activeColor: isDarkTheme ? Colors.white : Colors.blue,
                                   activeTrackColor: isDarkTheme ? Colors.white.withOpacity(0.5) : Colors.blue.withOpacity(0.5),
@@ -200,12 +213,12 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
                               ),
                             ),
                             SizedBox(height: 16),
+                            _buildRadioOption('Never delete', isDarkTheme),
                             _buildRadioOption('24 hours', isDarkTheme),
                             _buildRadioOption('15 days', isDarkTheme),
                             _buildRadioOption('30 days', isDarkTheme),
                             _buildRadioOption('60 days', isDarkTheme),
                             _buildRadioOption('90 days', isDarkTheme),
-                            _buildRadioOption('Never delete', isDarkTheme),
                           ],
                         ),
                       ),
@@ -220,38 +233,62 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
           Container(
             width: double.infinity,
             padding: EdgeInsets.all(16),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDarkTheme ? Colors.white : Colors.blue,
-                foregroundColor: isDarkTheme ? Colors.black : Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () {
-                // Save the preferences
-                _savePreferences();
-                
-                // Show confirmation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Settings saved'),
-                    behavior: SnackBarBehavior.floating,
+            child: Column(
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDarkTheme ? Colors.white : Colors.blue,
+                    foregroundColor: isDarkTheme ? Colors.black : Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: isDarkTheme ? 0 : 2,
                   ),
-                );
-                
-                // Navigate back
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Save Settings',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  onPressed: () {
+                    // Save the preferences
+                    _savePreferences();
+                    
+                    // Show confirmation with the appropriate message
+                    String message;
+                    if (_autoDeletionPeriod != _originalAutoDeletionPeriod || _saveHistory != _originalSaveHistory) {
+                      if (_autoDeletionPeriod != _originalAutoDeletionPeriod) {
+                        if (_autoDeletionPeriod == 'Never delete') {
+                          message = 'Auto-deletion disabled. Chats will be kept indefinitely.';
+                        } else {
+                          message = 'Chats will be automatically deleted $_autoDeletionPeriod after creation';
+                        }
+                      } else {
+                        message = 'Settings saved';
+                      }
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(message),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('No changes made'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                    
+                    // Navigate back
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    'Save Settings',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
@@ -271,7 +308,7 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
               setState(() {
                 _autoDeletionPeriod = newValue!;
               });
-              // TODO: Save this preference
+              // No longer saving immediately - will be saved when user taps Save Settings
             },
             activeColor: isDarkTheme ? Colors.white : Colors.blue,
           ),
@@ -294,6 +331,16 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
     
     // Save settings to the chat service
     chatService.setChatSavingEnabled(_saveHistory);
+    
+    // Save auto-deletion period to shared preferences and update ChatService
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auto_deletion_period', _autoDeletionPeriod);
+    
+    // Trigger an immediate execution of auto-deletion with the new period
     chatService.setAutoDeletionPeriod(_autoDeletionPeriod);
+    
+    // Update original values to match current values
+    _originalSaveHistory = _saveHistory;
+    _originalAutoDeletionPeriod = _autoDeletionPeriod;
   }
 } 

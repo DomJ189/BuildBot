@@ -24,6 +24,7 @@ class Chat {
         'sender': m['sender'] ?? '', // Extracts sender from message map
         'message': m['message'] ?? '', // Extracts message content from message map
         'videos': m['videos'] ?? [], // Preserve video data if present
+        'redditPosts': m['redditPosts'] ?? [], // Preserve Reddit post data
         'edited': m['edited'] ?? false, // Add edited flag
         'regenerated': m['regenerated'] ?? false, // Add regenerated flag
       }).toList(),
@@ -39,15 +40,19 @@ class Chat {
         // Handle videos data if present
         final videosData = m['videos'] as List? ?? [];
         
+        // Handle Reddit posts data if present
+        final redditPostsData = m['redditPosts'] as List? ?? [];
+        
         return {
           'sender': (m['sender'] ?? '').toString(), // Ensures sender is a string
           'message': (m['message'] ?? '').toString(), // Ensures message is a string
           'videos': videosData, // Preserve original video data
+          'redditPosts': redditPostsData, // Preserve original Reddit post data
           'edited': m['edited'] ?? false, // Get edited flag with default false
           'regenerated': m['regenerated'] ?? false, // Get regenerated flag with default false
         };
       }
-      return {'sender': '', 'message': '', 'videos': [], 'edited': false, 'regenerated': false}; // Default values if message is not a map
+      return {'sender': '', 'message': '', 'videos': [], 'redditPosts': [], 'edited': false, 'regenerated': false}; // Default values if message is not a map
     }).toList() ?? []; // Fallback to an empty list if null
 
     // Creates a Chat object from the provided map
