@@ -6,9 +6,10 @@ import '../viewmodels/login_viewmodel.dart';
 import 'sign_up_screen.dart'; // Import Sign-Up Screen
 import 'forgot_password_screen.dart'; // Import Forgot Password Screen
 import '../providers/theme_provider.dart'; // Import Theme Provider
+import '../widgets/styled_alert.dart';
 
 
-// LoginScreen: Handles user login functionality
+/// User authentication screen that handles login to the application.Features email/password login with validation and navigation to related screens.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -18,7 +19,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormBuilderState>(); // Key to manage form state
-  bool _obscurePassword = true;
+  bool _obscurePassword = true; // Controls password visibility toggle
 
   @override
   Widget build(BuildContext context) {
@@ -45,13 +46,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     SizedBox(height: 40),
-                    // You can add your logo here
+                    // Logo placeholder
                     SizedBox(height: 40),
+                    
+                    // Form with email and password fields
                     FormBuilder(
                       key: _formKey,
                       child: Column(
                         children: [
-                          // Email Field
+                          // Email input field with validation
                           FormBuilderTextField(
                             name: 'email',
                             style: TextStyle(color: theme.textTheme.bodyLarge?.color),
@@ -81,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           SizedBox(height: 16),
                           
-                          // Password Field
+                          // Password input field with toggle visibility
                           FormBuilderTextField(
                             name: 'password',
                             obscureText: _obscurePassword,
@@ -136,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           SizedBox(height: 24),
                           
-                          // Login Button
+                          // Login button with loading state
                           SizedBox(
                             width: double.infinity,
                             height: 50,
@@ -151,13 +154,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                       final success = await viewModel.login(email, password);
                                       
                                       if (success && mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Logged in successfully!')),
+                                        StyledAlerts.showSnackBar(
+                                          context, 
+                                          'Logged in successfully!',
+                                          type: AlertType.success,
                                         );
                                         Navigator.pushReplacementNamed(context, '/main');
                                       } else if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text(viewModel.errorMessage ?? 'Login failed')),
+                                        final errorMsg = _getReadableErrorMessage(viewModel.errorMessage ?? 'Login failed');
+                                        StyledAlerts.showSnackBar(
+                                          context, 
+                                          errorMsg,
+                                          type: AlertType.error,
                                         );
                                       }
                                     }
@@ -177,16 +185,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           SizedBox(height: 24),
-                          
-                          // Error message display
-                          if (viewModel.errorMessage != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 16.0),
-                              child: Text(
-                                viewModel.errorMessage!,
-                                style: TextStyle(color: theme.colorScheme.error),
-                              ),
-                            ),
                           
                           // Sign Up Link
                           TextButton(
@@ -212,5 +210,19 @@ class _LoginScreenState extends State<LoginScreen> {
         },
       ),
     );
+  }
+
+  // Helper method to convert Firebase errors to user-friendly messages
+  String _getReadableErrorMessage(String error) {
+    if (error.contains('user-not-found')) {
+      return 'No account found with this email address';
+    } else if (error.contains('wrong-password')) {
+      return 'Incorrect password, please try again';
+    } else if (error.contains('invalid-email')) {
+      return 'Invalid email format. Please check your email.';
+    } else if (error.contains('too-many-requests')) {
+      return 'Too many failed attempts. Please try again later.';
+    }
+    return error;
   }
 }

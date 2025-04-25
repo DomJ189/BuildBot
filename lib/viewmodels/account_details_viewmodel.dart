@@ -22,7 +22,13 @@ class AccountDetailsViewModel extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      throw Exception('Failed to update display name: $e');
+      String errorMsg = e.toString();
+      
+      if (errorMsg.contains('network-request-failed')) {
+        throw 'Network error. Please check your internet connection and try again.';
+      } else {
+        throw 'Failed to update display name. Please try again later.';
+      }
     }
   }
   
@@ -57,16 +63,22 @@ class AccountDetailsViewModel extends ChangeNotifier {
         return;
       }
     } catch (e) {
-      if (e.toString().contains('requires-recent-login')) {
-        throw Exception('Please log out and log back in before changing your email');
-      } else if (e.toString().contains('email-already-in-use')) {
-        throw Exception('This email is already in use by another account');
-      } else if (e.toString().contains('invalid-email')) {
-        throw Exception('The email address is not valid');
-      } else if (e.toString().contains('wrong-password')) {
-        throw Exception('The password you entered is incorrect');
+      String errorMsg = e.toString();
+      
+      if (errorMsg.contains('invalid-credential') || errorMsg.contains('invalid-email-credential')) {
+        throw 'Your password is incorrect. Please check and try again.';
+      } else if (errorMsg.contains('requires-recent-login')) {
+        throw 'Please log out and log in again before changing your email.';
+      } else if (errorMsg.contains('email-already-in-use')) {
+        throw 'This email is already in use by another account.';
+      } else if (errorMsg.contains('invalid-email')) {
+        throw 'Please enter a valid email address.';
+      } else if (errorMsg.contains('wrong-password')) {
+        throw 'The password you entered is incorrect.';
+      } else if (errorMsg.contains('network-request-failed')) {
+        throw 'Network error. Please check your internet connection and try again.';
       } else {
-        throw Exception('Failed to update email: $e');
+        throw 'Failed to update email. Please try again later.';
       }
     }
   }
@@ -85,7 +97,21 @@ class AccountDetailsViewModel extends ChangeNotifier {
         await currentUser!.updatePassword(newPassword);
       }
     } catch (e) {
-      throw Exception('Failed to update password: $e');
+      String errorMsg = e.toString();
+      
+      if (errorMsg.contains('invalid-credential') || errorMsg.contains('invalid-email-credential')) {
+        throw 'Your current password is incorrect. Please check and try again.';
+      } else if (errorMsg.contains('requires-recent-login')) {
+        throw 'Please log out and log in again before changing your password.';
+      } else if (errorMsg.contains('weak-password')) {
+        throw 'The new password is too weak. It should be at least 6 characters.';
+      } else if (errorMsg.contains('wrong-password')) {
+        throw 'Current password is incorrect.';
+      } else if (errorMsg.contains('network-request-failed')) {
+        throw 'Network error. Please check your internet connection and try again.';
+      } else {
+        throw 'Failed to update password. Please try again later.';
+      }
     }
   }
   
@@ -97,7 +123,7 @@ class AccountDetailsViewModel extends ChangeNotifier {
       
       final userEmail = user.email;
       if (userEmail == null) {
-        throw Exception('No email associated with this account');
+        throw 'No email associated with this account';
       }
       
       // 1. Delete all user's chats from Firestore
@@ -128,7 +154,17 @@ class AccountDetailsViewModel extends ChangeNotifier {
       // 5. Delete the Firebase Authentication account
       await user.delete();
     } catch (e) {
-      throw Exception('Failed to delete account: $e');
+      String errorMsg = e.toString();
+      
+      if (errorMsg.contains('requires-recent-login')) {
+        throw 'For security reasons, please log out and log in again before deleting your account.';
+      } else if (errorMsg.contains('invalid-credential') || errorMsg.contains('invalid-email-credential')) {
+        throw 'Authentication failed. Please check your password and try again.';
+      } else if (errorMsg.contains('network-request-failed')) {
+        throw 'Network error. Please check your internet connection and try again.';
+      } else {
+        throw 'Failed to delete account. Please try again later.';
+      }
     }
   }
   
@@ -282,13 +318,21 @@ class AccountDetailsViewModel extends ChangeNotifier {
         
         await currentUser!.reauthenticateWithCredential(credential);
       } else {
-        throw Exception('No user is currently signed in');
+        throw 'No user is currently signed in.';
       }
     } catch (e) {
-      if (e.toString().contains('wrong-password')) {
-        throw Exception('Incorrect password');
+      String errorMsg = e.toString();
+      
+      if (errorMsg.contains('invalid-credential') || errorMsg.contains('invalid-email-credential')) {
+        throw 'Your password is incorrect. Please check and try again.';
+      } else if (errorMsg.contains('wrong-password')) {
+        throw 'Incorrect password. Please check and try again.';
+      } else if (errorMsg.contains('network-request-failed')) {
+        throw 'Network error. Please check your internet connection and try again.';
+      } else if (errorMsg.contains('too-many-requests')) {
+        throw 'Too many failed attempts. Please try again later.';
       } else {
-        throw Exception('Authentication failed: $e');
+        throw 'Authentication failed. Please try again later.';
       }
     }
   }

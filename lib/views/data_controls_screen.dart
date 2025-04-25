@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/chat_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/styled_alert.dart';
 
 class DataControlsScreen extends StatefulWidget {
   const DataControlsScreen({super.key});
@@ -251,6 +252,8 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
                     
                     // Show confirmation with the appropriate message
                     String message;
+                    AlertType alertType = AlertType.success;
+                    
                     if (_autoDeletionPeriod != _originalAutoDeletionPeriod || _saveHistory != _originalSaveHistory) {
                       if (_autoDeletionPeriod != _originalAutoDeletionPeriod) {
                         if (_autoDeletionPeriod == 'Never delete') {
@@ -262,18 +265,16 @@ class _DataControlsScreenState extends State<DataControlsScreen> {
                         message = 'Settings saved';
                       }
                       
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(message),
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      StyledAlerts.showSnackBar(
+                        context,
+                        message,
+                        type: alertType,
                       );
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('No changes made'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      StyledAlerts.showSnackBar(
+                        context,
+                        'No changes made',
+                        type: AlertType.info,
                       );
                     }
                     

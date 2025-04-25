@@ -87,16 +87,16 @@ class RedditClient {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        // Add logging to debug JSON structure
+        // Process Reddit API response data
         if (data['data'] != null && data['data']['children'] != null) {
           final children = data['data']['children'] as List;
-          print('Found ${children.length} posts in r/$subreddit for query "$query"');
           
           if (children.isEmpty) {
-            print('No results found in r/$subreddit for query "$query"');
+            // No results found in the subreddit for this query
             return [];
           }
           
+          // Transform API response into RedditPost objects
           final posts = children
               .map((post) {
                 try {
@@ -114,7 +114,7 @@ class RedditClient {
                   }
                   return null;
                 } catch (e) {
-                  print('Error parsing post from Reddit: $e');
+                  // Handle errors when parsing a specific post
                   return null;
                 }
               })
@@ -123,16 +123,15 @@ class RedditClient {
           
           return posts;
         } else {
-          print('Invalid or unexpected Reddit API response structure');
-          print('Response data: ${response.body.substring(0, Math.min(500, response.body.length))}...');
+          // Invalid API response structure received
           return [];
         }
       } else {
-        print('Reddit API Error: ${response.statusCode} - ${response.body}');
+        // API returned error status code
         return [];
       }
     } catch (e) {
-      print('Exception in Reddit search: $e');
+      // Exception occurred during API request
       return [];
     }
   }
@@ -156,7 +155,6 @@ class RedditPost {
   });
 
   factory RedditPost.fromJson(Map<String, dynamic> json) {
-    // Add debug logging
     try {
       // Handle score which can be int, double, or null
       int score = 0;
@@ -165,8 +163,6 @@ class RedditPost {
           score = json['score'];
         } else if (json['score'] is double) {
           score = (json['score'] as double).toInt();
-        } else {
-          print('Unexpected type for score: ${json['score'].runtimeType}');
         }
       }
       
@@ -177,8 +173,6 @@ class RedditPost {
           createdUtc = json['created_utc'];
         } else if (json['created_utc'] is double) {
           createdUtc = (json['created_utc'] as double).toInt();
-        } else {
-          print('Unexpected type for created_utc: ${json['created_utc'].runtimeType}');
         }
       }
       
@@ -191,9 +185,7 @@ class RedditPost {
         createdUtc: createdUtc,
       );
     } catch (e) {
-      print('Error creating RedditPost from JSON: $e');
-      print('JSON data: $json');
-      // Return empty post as fallback
+      // Return empty post if error occurs during parsing
       return RedditPost(
         title: 'Error loading post',
         selftext: '',

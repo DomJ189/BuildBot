@@ -393,7 +393,7 @@ class ChatService {
 
   // Add these properties to the ChatService class
   Timer? _autoDeletionTimer;
-  final Duration _checkInterval = Duration(minutes: 1); // Check every minute instead of 6 hours
+  final Duration _checkInterval = Duration(hours: 1); // Check once per hour instead of every minute
 
   // Update this method to initialize auto-deletion
   void initializeAutoDeletion() {
@@ -423,14 +423,12 @@ class ChatService {
       ].contains(periodSetting)) {
         periodSetting = 'Never delete';
         await prefs.setString('auto_deletion_period', periodSetting);
+        // Only log this as it indicates a configuration problem
         print('Corrected invalid auto-deletion period to "Never delete"');
       }
       
-      print('Auto-deletion check running with period: $periodSetting');
-      
       // If set to never delete, exit early
       if (periodSetting == 'Never delete') {
-        print('Auto-deletion is disabled (set to "Never delete")');
         return;
       }
       
@@ -440,31 +438,23 @@ class ChatService {
       
       if (periodSetting == '24 hours') {
         cutoffDate = now.subtract(Duration(hours: 24));
-        print('Using 24 hour deletion period, cutoff: $cutoffDate');
       } else if (periodSetting == '15 days') {
         cutoffDate = now.subtract(Duration(days: 15));
-        print('Using 15 day deletion period, cutoff: $cutoffDate');
       } else if (periodSetting == '30 days') {
         cutoffDate = now.subtract(Duration(days: 30));
-        print('Using 30 day deletion period, cutoff: $cutoffDate');
       } else if (periodSetting == '60 days') {
         cutoffDate = now.subtract(Duration(days: 60));
-        print('Using 60 day deletion period, cutoff: $cutoffDate');
       } else if (periodSetting == '90 days') {
         cutoffDate = now.subtract(Duration(days: 90));
-        print('Using 90 day deletion period, cutoff: $cutoffDate');
       } else {
         // Default to 30 days if setting is unrecognized
         cutoffDate = now.subtract(Duration(days: 30));
-        print('Unrecognized period setting: $periodSetting, defaulting to 30 days');
       }
-      
-      print('Cutoff date for deletion: $cutoffDate');
       
       // Get the user's email
       final userEmail = _getUserDocId();
       if (userEmail == null) {
-        print('No user logged in, skipping auto-deletion');
+        // No active user session, can't perform deletion
         return;
       }
       
@@ -475,59 +465,50 @@ class ChatService {
           .collection('chats')
           .get();
       
-      print('Found ${allChats.docs.length} total chats to check for deletion');
-      
       // Find documents to delete by checking their dates manually
       List<DocumentSnapshot> docsToDelete = [];
       
       for (var doc in allChats.docs) {
         try {
           final data = doc.data() as Map<String, dynamic>;
-          print('Checking chat: ${data['title'] ?? 'Untitled'} (id: ${data['id'] ?? 'unknown'})');
           
+          // Check if chat has a creation date
           final chatDateStr = data['createdAt'] as String?;
           if (chatDateStr != null) {
             final chatDate = DateTime.parse(chatDateStr);
-            print('Chat date: $chatDate, cutoff: $cutoffDate, is before: ${chatDate.isBefore(cutoffDate)}');
             
+            // Check if chat is older than cutoff date
             if (chatDate.isBefore(cutoffDate)) {
               docsToDelete.add(doc);
-              print('Adding chat for deletion: ${data['title']} created at $chatDate');
             }
-          } else {
-            print('No createdAt date found for chat: ${data['title'] ?? 'Untitled'}');
           }
         } catch (e) {
-          print('Error processing document date: $e');
+          // Skip chats with invalid dates
         }
       }
       
       // If no chats to delete, exit
       if (docsToDelete.isEmpty) {
-        print('No chats found to delete based on the cutoff date');
         return;
       }
-      
-      print('Preparing to delete ${docsToDelete.length} chats...');
       
       // Delete the old chats in a batch
       final batch = _firestore.batch();
       for (var doc in docsToDelete) {
         batch.delete(doc.reference);
-        final data = doc.data() as Map<String, dynamic>;
-        print('Adding deletion operation for chat: ${data['title'] ?? 'Untitled'}');
       }
       
       // Commit the batch deletion
       await batch.commit();
       
-      // Log the deletion
+      // Log the deletion - this is important to keep
       print('Successfully auto-deleted ${docsToDelete.length} chats older than $periodSetting');
       
       // Refresh the chat list after deletion
       initializeChatHistory();
       
     } catch (e) {
+      // Keep error logs
       print('Error performing auto-deletion: $e');
     }
   }

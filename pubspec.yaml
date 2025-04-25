@@ -30,9 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^2.32.0       # Core Firebase functionality
-  firebase_auth: ^4.17.4        # Firebase User Authentication (email/password login)
-  cloud_firestore: ^4.15.4      # Firestore Database for storing chat history
   http: ^1.2.2                 # Makes HTTP requests to APIs
   provider: ^6.1.2             # Simplified state management
   flutter_dotenv: ^5.0.2       # Load '.env' files for sensitive data
@@ -52,8 +49,11 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  firebase_storage: ^11.6.5
   image_picker: ^1.1.2
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.2
+  cloud_firestore: ^5.6.6
+  firebase_storage: ^12.4.5
 
 dev_dependencies:
   flutter_test:

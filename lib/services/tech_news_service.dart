@@ -50,12 +50,11 @@ class TechNewsService {
       ];
       final List<RedditPostPreview> results = [];
       
-      // Extract key search terms from the query for later relevance scoring
+      // Refine the search query for better results
       String searchQuery = _refineSearchQuery(query);
-      print('Searching Reddit for: "$searchQuery"');
       
+      // Extract key terms for relevance scoring
       final queryTerms = _extractKeyTerms(query.toLowerCase());
-      print('Extracted query terms: $queryTerms');
       
       // Get posts from relevant subreddits
       for (final subreddit in subreddits) {

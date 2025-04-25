@@ -5,6 +5,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/sign_up_viewmodel.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/styled_alert.dart';
 
 // Handles user registration functionality
 class SignUpScreen extends StatefulWidget {
@@ -258,8 +259,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               : () async {
                                   if (_formKey.currentState?.saveAndValidate() ?? false) {
                                     if (!_agreedToTerms) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Please agree to the Terms and Privacy Policy')),
+                                      StyledAlerts.showSnackBar(
+                                        context,
+                                        'Please agree to the Terms and Privacy Policy',
+                                        type: AlertType.warning,
                                       );
                                       return;
                                     }
@@ -276,13 +279,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     );
                                     
                                     if (success && mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Account created successfully!')),
+                                      StyledAlerts.showSnackBar(
+                                        context,
+                                        'Account created successfully!',
+                                        type: AlertType.success,
                                       );
                                       Navigator.pushReplacementNamed(context, '/login');
                                     } else if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(viewModel.errorMessage ?? 'Registration failed')),
+                                      // Show a user-friendly error message instead of the raw Firebase error
+                                      final errorMsg = _getReadableErrorMessage(viewModel.errorMessage ?? 'Registration failed');
+                                      StyledAlerts.showSnackBar(
+                                        context,
+                                        errorMsg,
+                                        type: AlertType.error,
                                       );
                                     }
                                   }
@@ -376,21 +385,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _showTermsAndPrivacyDialog(BuildContext context, {required int initialTab}) {
+    // Use a direct context reference instead of relying on Provider
     final theme = Theme.of(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
+    final isDarkTheme = theme.brightness == Brightness.dark;
 
+    // Use a direct dialog call that doesn't depend on providers
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return DefaultTabController(
           length: 2,
           initialIndex: initialTab,
           child: Dialog(
-            backgroundColor: theme.dialogBackgroundColor,
+            backgroundColor: isDarkTheme ? const Color(0xFF212121) : Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.dividerColor),
+              side: BorderSide(
+                color: theme.primaryColor.withOpacity(0.2),
+                width: 1,
+              ),
             ),
             child: SizedBox(
               width: double.maxFinite,
@@ -399,7 +412,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    color: theme.appBarTheme.backgroundColor,
+                    decoration: BoxDecoration(
+                      color: isDarkTheme ? const Color(0xFF333333) : theme.primaryColor.withOpacity(0.1),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -408,11 +427,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           children: [
                             IconButton(
                               icon: Icon(Icons.close, color: theme.iconTheme.color),
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () => Navigator.of(dialogContext).pop(),
                             ),
                             Text(
                               'Legal Information',
-                              style: TextStyle(color: theme.textTheme.titleLarge?.color, fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: theme.textTheme.titleLarge?.color, 
+                                fontSize: 18, 
+                                fontWeight: FontWeight.bold
+                              ),
                             ),
                             SizedBox(width: 48), // Balance the close button
                           ],
@@ -422,9 +445,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             Tab(text: 'Terms of Use'),
                             Tab(text: 'Privacy Policy'),
                           ],
-                          labelColor: theme.colorScheme.primary,
+                          labelColor: theme.primaryColor,
                           unselectedLabelColor: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
-                          indicatorColor: theme.colorScheme.primary,
+                          indicatorColor: theme.primaryColor,
+                          indicatorWeight: 3,
                         ),
                       ],
                     ),
@@ -530,5 +554,22 @@ We may update this privacy policy from time to time. We will notify you of any c
 8. Contact Us
 If you have any questions about this Privacy Policy, please contact us through the app.
 """;
+  }
+
+  // Helper method to convert Firebase errors to user-friendly messages
+  String _getReadableErrorMessage(String error) {
+    if (error.contains('email-already-in-use')) {
+      return 'This email is already in use. Please use a different email or try to log in.';
+    } else if (error.contains('weak-password')) {
+      return 'The password provided is too weak. Please choose a stronger password.';
+    } else if (error.contains('invalid-email')) {
+      return 'Invalid email format. Please enter a valid email address.';
+    } else if (error.contains('operation-not-allowed')) {
+      return 'Account creation is currently disabled. Please try again later.';
+    } else if (error.contains('network-request-failed')) {
+      return 'Network error. Please check your internet connection and try again.';
+    } else {
+      return 'Failed to create account. Please try again later.';
+    }
   }
 }

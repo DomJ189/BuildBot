@@ -3,6 +3,7 @@ import '../viewmodels/account_details_viewmodel.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import 'forgot_password_screen.dart'; // Import Forgot Password Screen
+import '../widgets/styled_alert.dart';
 
 class DeleteAccountScreen extends StatelessWidget {
   final AccountDetailsViewModel viewModel;
@@ -139,8 +140,10 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
                 ),
                 onPressed: _isLoading ? null : () async {
                   if (_passwordController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please enter your password')),
+                    StyledAlerts.showSnackBar(
+                      context,
+                      'Please enter your password',
+                      type: AlertType.warning,
                     );
                     return;
                   }
@@ -150,20 +153,42 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
                   });
                   
                   try {
+                    // Show confirmation dialog before proceeding
+                    final confirmed = await StyledAlerts.showConfirmationDialog(
+                      context: context,
+                      title: 'Confirm Account Deletion',
+                      message: 'This action cannot be undone. All your data will be permanently deleted. Are you sure you want to continue?',
+                      confirmText: 'Delete Account',
+                      cancelText: 'Cancel',
+                    );
+                    
+                    if (!confirmed) {
+                      setState(() {
+                        _isLoading = false;
+                      });
+                      return;
+                    }
+                    
                     // Re-authenticate user before deleting
                     await widget.viewModel.reauthenticateUser(_passwordController.text);
                     await widget.viewModel.deleteAccount();
                     
                     Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Account deleted successfully')),
+                    StyledAlerts.showSnackBar(
+                      context,
+                      'Account deleted successfully',
+                      type: AlertType.success,
                     );
                   } catch (e) {
                     setState(() {
                       _isLoading = false;
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${e.toString()}')),
+                    // Show a user-friendly error message
+                    final errorMsg = _getReadableErrorMessage(e.toString());
+                    StyledAlerts.showSnackBar(
+                      context,
+                      errorMsg,
+                      type: AlertType.error,
                     );
                   }
                 },
@@ -183,5 +208,18 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
         ),
       ),
     );
+  }
+
+  // Helper method to convert Firebase errors to user-friendly messages
+  String _getReadableErrorMessage(String error) {
+    if (error.contains('wrong-password')) {
+      return 'Incorrect password, please check and try again';
+    } else if (error.contains('requires-recent-login')) {
+      return 'For security reasons, please log out and log in again before deleting your account';
+    } else if (error.contains('network-request-failed')) {
+      return 'Network error, please check your internet connection';
+    } else {
+      return 'Failed to delete account. Please try again later.';
+    }
   }
 } 

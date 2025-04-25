@@ -7,6 +7,7 @@ import 'edit_profile_screen.dart';
 import 'change_email_screen.dart';
 import 'change_password_screen.dart';
 import 'delete_account_screen.dart';
+import '../widgets/styled_alert.dart';
 
 // Allows users to view and manage their account details
 class AccountDetailsScreen extends StatelessWidget {
@@ -135,8 +136,10 @@ class _AccountDetailsView extends StatelessWidget {
                           );
                           
                           if (result == true) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Profile updated successfully')),
+                            StyledAlerts.showSnackBar(
+                              context,
+                              'Profile updated successfully',
+                              type: AlertType.success,
                             );
                           }
                         },

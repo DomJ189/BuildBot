@@ -10,6 +10,7 @@ import '../widgets/reddit_link_card.dart';
 import '../models/reddit_post_preview.dart';
 import '../services/youtube_service.dart';
 
+/// Main chat interface screen where users interact with the AI assistant.Displays messages, handles user input, and renders media content.
 class ChatInterface extends StatefulWidget {
   const ChatInterface({super.key});
 
@@ -18,50 +19,56 @@ class ChatInterface extends StatefulWidget {
 }
 
 class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateMixin {
-  final TextEditingController _controller = TextEditingController();
+  // Text input controllers
+  final TextEditingController _controller = TextEditingController();     // For new messages
+  final TextEditingController _editController = TextEditingController(); // For editing messages
+  
+  // Scroll controller to manage chat scrolling behavior
   final ScrollController _scrollController = ScrollController();
+  
+  // Reference to the view model that manages chat state and logic
   late ChatInterfaceViewModel _viewModel;
   
-  // Add a new controller for editing messages
-  final TextEditingController _editController = TextEditingController();
-  
-  // Add animation controller
+  // Animation properties for typing indicator dots
   late AnimationController _dotAnimationController;
-  int _activeDotIndex = 0;
+  int _activeDotIndex = 0; // Tracks which dot is currently active in animation
   
   @override
   void initState() {
     super.initState();
     
-    // Initialize the dot animation controller
+    // Initialize animation controller for the typing indicator dots
     _dotAnimationController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
     )..addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         setState(() {
-          // Move to the next dot
+          // Cycle through the three dots (0, 1, 2)
           _activeDotIndex = (_activeDotIndex + 1) % 3;
         });
-        // Reset and repeat
+        // Reset and continue animation
         _dotAnimationController.reset();
         _dotAnimationController.forward();
       }
     });
     
-    // Start the animation
+    // Start the typing animation immediately
     _dotAnimationController.forward();
     
-    // Add scroll listener to show/hide scroll to bottom button
+    // Configure scroll detection to show/hide scroll button
     _scrollController.addListener(_scrollListener);
   }
   
+  // Determines when to show the scroll-to-bottom button based on scroll position
   void _scrollListener() {
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
+    // Show button when user has scrolled up more than 200 pixels from bottom
     _viewModel.setScrollButtonVisibility(maxScroll - currentScroll > 200);
   }
   
+  // Scrolls the chat to the bottom with animation
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -72,10 +79,11 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     }
   }
   
+  // Clean up resources when the widget is disposed
   @override
   void dispose() {
     _controller.dispose();
-    _editController.dispose(); // Dispose of edit controller
+    _editController.dispose();
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     _dotAnimationController.dispose();
@@ -84,10 +92,12 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
   
   @override
   Widget build(BuildContext context) {
+    // Access theme information for styling
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     final chatService = Provider.of<ChatService>(context, listen: false);
     
+    // Create ViewModel and listen for changes with Consumer
     return ChangeNotifierProvider(
       create: (_) => ChatInterfaceViewModel(chatService: chatService),
       child: Consumer<ChatInterfaceViewModel>(
@@ -99,7 +109,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
             body: SafeArea(
               child: Column(
                 children: [
-                  // Empty state or messages
+                  // Main chat area - shows empty state or message list
                   Expanded(
                     child: viewModel.messages.isEmpty
                         ? _buildEmptyState(context, themeProvider)
@@ -107,7 +117,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                             children: [
                               _buildChatMessages(context, viewModel, themeProvider),
                               
-                              // New Chat floating button
+                              // "New Chat" button positioned at top center
                               Positioned(
                                 top: 8,
                                 left: 0,
@@ -139,7 +149,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                                 ),
                               ),
                               
-                              // Scroll to bottom button
+                              // Scroll-to-bottom button (visible when scrolled up)
                               if (viewModel.isScrollToBottomButtonVisible)
                                 Positioned(
                                   right: 16,
@@ -159,7 +169,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                           ),
                   ),
                   
-                  // Input area
+                  // Message input area at bottom of screen
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
                     child: Container(
@@ -169,6 +179,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                       ),
                       child: Row(
                         children: [
+                          // Text input field
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
@@ -192,13 +203,14 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                                     viewModel.sendMessage(value);
                                     _controller.clear();
                                     
-                                    // Scroll to bottom after sending message
+                                    // Scroll to bottom after sending
                                     Future.delayed(Duration(milliseconds: 100), _scrollToBottom);
                                   }
                                 },
                               ),
                             ),
                           ),
+                          // Send message button
                           Container(
                             margin: EdgeInsets.all(4),
                             decoration: BoxDecoration(
@@ -216,7 +228,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                                   viewModel.sendMessage(_controller.text);
                                   _controller.clear();
                                   
-                                  // Scroll to bottom after sending message
+                                  // Scroll to bottom after sending
                                   Future.delayed(Duration(milliseconds: 100), _scrollToBottom);
                                 }
                               },
@@ -236,10 +248,11 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     );
   }
   
+  // Widget displayed when there are no messages in the chat
   Widget _buildEmptyState(BuildContext context, ThemeProvider themeProvider) {
     return Column(
       children: [
-        SizedBox(height: 60), // Add space at the top
+        SizedBox(height: 60), // Spacing at top
         Text(
           'What can I help with?',
           style: TextStyle(
@@ -264,17 +277,20 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     );
   }
   
+  // Builds the scrollable list of chat messages
   Widget _buildChatMessages(BuildContext context, ChatInterfaceViewModel viewModel, ThemeProvider themeProvider) {
     return ListView.builder(
       controller: _scrollController,
       padding: EdgeInsets.only(left: 16, right: 16, top: 64, bottom: 8),
-      itemCount: viewModel.messages.length + (viewModel.isBotTyping ? 1 : 0), // +1 for typing indicator when bot is typing
+      // Add an extra item for the typing indicator when bot is typing
+      itemCount: viewModel.messages.length + (viewModel.isBotTyping ? 1 : 0),
       itemBuilder: (context, index) {
         // Show typing indicator at the end when bot is typing
         if (viewModel.isBotTyping && index == viewModel.messages.length) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Show bot typing message or regeneration status
               _buildBotMessage(
                 viewModel.editingMessageIndex != null 
                     ? "Regenerating response..." 
@@ -285,7 +301,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                 isTyping: true,
                 messageIndex: -1, // Not a saved message yet
               ),
-              // Show videos during typing if available
+              // Show YouTube videos during typing if available
               if (viewModel.currentVideos.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
@@ -339,7 +355,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
           );
         }
         
-        // Show regular messages
+        // Render normal chat messages (user or bot)
         if (index < viewModel.messages.length) {
           final message = viewModel.messages[index];
           final isUser = message['sender'] == 'user';
@@ -347,6 +363,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
           // Check if this message is being edited
           final isEditing = viewModel.editingMessageIndex == index;
           
+          // Render different bubble styles for user vs bot
           if (isUser) {
             return _buildUserMessage(
               message['message'] ?? '', 
@@ -354,18 +371,17 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
               edited: message['edited'] == true
             );
           } else {
-            // For bot messages, check if there are videos
+            // Process bot-specific message content
             final videosList = message['videos'] as List<dynamic>?;
             final hasVideos = videosList != null && videosList.isNotEmpty;
             
-            // For bot messages, check if there are Reddit posts
             final redditPostsList = message['redditPosts'] as List<dynamic>?;
             final hasRedditPosts = redditPostsList != null && redditPostsList.isNotEmpty;
             
-            // Check if this is likely a response to a conversational message
+            // Check if this is likely a simple response like "you're welcome"
             final isConversational = _isLikelyConversationalResponse(message['message'] ?? '');
             
-            // Check if the previous message was the one showing videos or reddit posts
+            // Check if the previous message already showed media to avoid duplicate media in conversational responses
             bool previousMessageHadVideos = false;
             bool previousMessageHadRedditPosts = false;
             if (index > 0) {
@@ -380,6 +396,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Bot message bubble
                 _buildBotMessage(
                   message['message'] ?? '', 
                   themeProvider,
@@ -387,7 +404,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                   messageIndex: index,
                 ),
                 
-                // Show videos if available and not a conversational response after videos
+                // Show videos if available and not a conversational follow-up
                 if (hasVideos && !(isConversational && previousMessageHadVideos))
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0),
@@ -413,7 +430,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                     ),
                   ),
                 
-                // Show Reddit posts if available and not a conversational response after posts
+                // Show Reddit posts if available and not a conversational follow-up
                 if (hasRedditPosts && !(isConversational && previousMessageHadRedditPosts))
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0),
@@ -443,15 +460,16 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
           }
         }
         
-        return SizedBox.shrink();
+        return SizedBox.shrink(); // Fallback for invalid indices
       },
     );
   }
   
+  // Builds a user message bubble with edit option
   Widget _buildUserMessage(String message, ThemeProvider themeProvider, {bool edited = false}) {
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     
-    // Check if this message is being edited
+    // Check if this message is currently being edited
     final isBeingEdited = _viewModel.messages.indexWhere(
       (m) => m['sender'] == 'user' && m['message'] == message
     ) == _viewModel.editingMessageIndex;
@@ -468,7 +486,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
               // Edit button for user messages
               GestureDetector(
                 onTap: () {
-                  // Show edit dialog
+                  // Show edit dialog when tapped
                   _showEditDialog(message);
                 },
                 child: Padding(
@@ -476,18 +494,21 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                   child: Icon(
                     Icons.edit,
                     size: 16,
+                    // Highlight icon when message is being edited
                     color: isBeingEdited 
                         ? (isDarkTheme ? Colors.white : Colors.blue)
                         : (isDarkTheme ? Colors.grey[400] : Colors.grey[600]),
                   ),
                 ),
               ),
+              // Message bubble with text
               Flexible(
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: isDarkTheme ? Colors.white : Colors.blue,
                     borderRadius: BorderRadius.circular(16),
+                    // Add highlight border when being edited
                     border: isBeingEdited 
                         ? Border.all(
                             color: isDarkTheme ? Colors.blue : Colors.white,
@@ -526,7 +547,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
               ),
             ],
           ),
-          // Show edited indicator if message was edited
+          // "edited" label shown for edited messages
           if (edited)
             Padding(
               padding: const EdgeInsets.only(top: 2.0, right: 4.0),
@@ -544,20 +565,22 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     );
   }
   
-  // Show dialog to edit a message
+  // Shows a dialog to edit a user message
   void _showEditDialog(String message) {
+    // Find the index of the message to edit
     final messageIndex = _viewModel.messages.indexWhere(
       (m) => m['sender'] == 'user' && m['message'] == message
     );
     
     if (messageIndex < 0) return; // Message not found
     
-    // Set up the edit controller with current message
+    // Initialize edit controller with current message text
     _editController.text = message;
     
-    // Start editing this message in the view model
+    // Update ViewModel editing state
     _viewModel.startEditingMessage(messageIndex);
     
+    // Show the edit dialog
     showDialog(
       context: context,
       builder: (context) {
@@ -588,21 +611,23 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
             maxLines: 5,
           ),
           actions: [
+            // Cancel button
             TextButton(
               onPressed: () {
-                // Cancel editing
+                // Cancel editing without saving changes
                 _viewModel.cancelEditingMessage();
                 Navigator.of(context).pop();
               },
               child: Text('Cancel'),
             ),
+            // Update button
             TextButton(
               onPressed: () {
-                // Update the message and regenerate response
+                // Save changes and regenerate bot response
                 _viewModel.updateMessage(_editController.text);
                 Navigator.of(context).pop();
                 
-                // Scroll to show updated response
+                // Scroll to show updated content
                 Future.delayed(Duration(milliseconds: 100), _scrollToBottom);
               },
               child: Text('Update'),
@@ -613,10 +638,11 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     );
   }
   
+  // Builds a bot message bubble with optional typing indicator
   Widget _buildBotMessage(String message, ThemeProvider themeProvider, {
-    bool isTyping = false, 
-    bool regenerated = false,
-    int messageIndex = -1,
+    bool isTyping = false,  // Whether this is the typing indicator
+    bool regenerated = false, // Whether this message was regenerated
+    int messageIndex = -1,  // Index in the messages list (-1 for typing indicator)
   }) {
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     
@@ -628,7 +654,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Bot avatar placeholder
+              // Bot avatar with logo
               Container(
                 width: 36,
                 height: 36,
@@ -643,6 +669,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                 ),
               ),
               SizedBox(width: 8),
+              // Message bubble with content
               Flexible(
                 child: Container(
                   margin: EdgeInsets.only(bottom: regenerated ? 2 : 8),
@@ -656,6 +683,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Render message content with Markdown
                       if (message.isNotEmpty)
                         MarkdownBody(
                           data: message,
@@ -683,6 +711,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                             ),
                           ),
                         ),
+                      // Show typing animation if this is the typing indicator
                       if (isTyping)
                         Padding(
                           padding: EdgeInsets.only(top: message.isNotEmpty ? 8.0 : 0.0),
@@ -699,7 +728,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                   ),
                 ),
               ),
-              // Add regenerate button for bot messages (not during typing and valid index)
+              // Regenerate button for sent messages (not typing indicator)
               if (!isTyping && messageIndex >= 0)
                 Builder(
                   builder: (context) {
@@ -712,6 +741,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                           color: isDarkTheme ? Colors.grey[400] : Colors.grey[600],
                         ),
                         onPressed: () {
+                          // Trigger regeneration of this response
                           final viewModel = Provider.of<ChatInterfaceViewModel>(context, listen: false);
                           viewModel.regenerateMessage(messageIndex);
                           
@@ -728,7 +758,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                 ),
             ],
           ),
-          // Show regenerated indicator if message was regenerated
+          // "regenerated" label shown for regenerated messages
           if (regenerated)
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0, left: 48.0),
@@ -746,10 +776,11 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     );
   }
   
+  // Builds an animated typing indicator dot
   Widget _buildTypingDot(ThemeProvider themeProvider, int index) {
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     
-    // Use black dots with appropriate opacity for dark theme
+    // Determine dot color based on theme and active state
     final dotColor = isDarkTheme 
         ? Colors.white.withOpacity(index == _activeDotIndex ? 1.0 : 0.3)
         : Colors.black.withOpacity(index == _activeDotIndex ? 1.0 : 0.3);
@@ -770,8 +801,9 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     );
   }
   
-  // Helper to check if a message is likely conversational
+  // Determines if a bot message is a simple reply like "You're welcome"
   bool _isLikelyConversationalResponse(String message) {
+    // List of phrases that indicate a simple conversational response
     final conversationalPhrases = [
       'you\'re welcome', 'welcome', 'glad to help', 'happy to assist',
       'is there anything else', 'let me know if you have', 'feel free',

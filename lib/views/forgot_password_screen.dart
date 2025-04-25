@@ -4,6 +4,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/forgot_password_viewmodel.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/styled_alert.dart';
 
 // ForgotPasswordScreen: Handles user password reset request
 class ForgotPasswordScreen extends StatefulWidget {
@@ -108,44 +109,42 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       final success = await viewModel.sendPasswordResetEmail(email);
                                       
                                       if (success && mounted) {
-                                        // Show a more detailed message
-                                        showDialog(
+                                        // Show a more detailed message using our styled alerts
+                                        StyledAlerts.showDialog(
                                           context: context,
-                                          builder: (context) => AlertDialog(
-                                            backgroundColor: isDarkTheme ? Color(0xFF1A1A1A) : theme.dialogBackgroundColor,
-                                            title: Text(
-                                              'Reset Email Sent',
-                                              style: TextStyle(color: theme.textTheme.titleLarge?.color),
-                                            ),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'We\'ve sent an email to $email with instructions to reset your password.',
-                                                  style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
-                                                ),
-                                                SizedBox(height: 16),
-                                                Text(
-                                                  'Please check your email and follow the link to reset your password.',
-                                                  style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () {
-                                                  Navigator.pop(context);
-                                                  Navigator.pop(context); // Return to login screen
-                                                },
-                                                child: Text('OK'),
+                                          title: 'Reset Email Sent',
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'We\'ve sent an email to $email with instructions to reset your password.',
+                                                style: TextStyle(fontSize: 16, height: 1.5),
+                                              ),
+                                              SizedBox(height: 16),
+                                              Text(
+                                                'Please check your email inbox (and spam folder) and follow the link to reset your password.',
+                                                style: TextStyle(fontSize: 16, height: 1.5),
                                               ),
                                             ],
                                           ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                Navigator.pop(context); // Return to login screen
+                                              },
+                                              child: Text('OK'),
+                                            ),
+                                          ],
                                         );
                                       } else if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text(viewModel.errorMessage ?? 'Failed to send reset email')),
+                                        // Show a user-friendly error message
+                                        final errorMsg = _getReadableErrorMessage(viewModel.errorMessage ?? 'Failed to send reset email');
+                                        StyledAlerts.showSnackBar(
+                                          context,
+                                          errorMsg,
+                                          type: AlertType.error,
                                         );
                                       }
                                     }
@@ -198,5 +197,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         },
       ),
     );
+  }
+
+  // Helper method to convert Firebase errors to user-friendly messages
+  String _getReadableErrorMessage(String error) {
+    if (error.contains('user-not-found')) {
+      return 'No account found with this email address';
+    } else if (error.contains('invalid-email')) {
+      return 'Please enter a valid email address';
+    } else if (error.contains('network-request-failed')) {
+      return 'Network error, please check your internet connection';
+    } else if (error.contains('too-many-requests')) {
+      return 'Too many attempts, please try again later';
+    } else {
+      return 'Failed to send reset email. Please try again later.';
+    }
   }
 } 

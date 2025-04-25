@@ -5,7 +5,9 @@ import '../models/chat.dart';
 import '../providers/theme_provider.dart';
 import 'package:intl/intl.dart';
 import '../viewmodels/chat_history_viewmodel.dart';
+import '../widgets/styled_alert.dart';
 
+/// Displays a list of previous conversations and allows users to view, select, delete, or pin chat histories.
 class ChatHistoryScreen extends StatelessWidget {
   const ChatHistoryScreen({super.key});
 
@@ -44,10 +46,11 @@ class ChatHistoryScreen extends StatelessWidget {
     );
   }
   
+  /// Builds context-aware app bar actions for selection mode
   List<Widget> _buildAppBarActions(BuildContext context, ChatHistoryViewModel viewModel, ThemeProvider themeProvider) {
     if (viewModel.isSelectionMode) {
       return [
-        // Select all button
+        // Select all button with checkbox indicator
         IconButton(
           icon: Container(
             decoration: BoxDecoration(
@@ -67,12 +70,12 @@ class ChatHistoryScreen extends StatelessWidget {
           ),
           onPressed: viewModel.toggleSelectAll,
         ),
-        // Pin selected button
+        // Pin selected chats to top of list
         IconButton(
           icon: Icon(Icons.push_pin_outlined),
           onPressed: viewModel.pinSelectedChats,
         ),
-        // Delete selected button
+        // Delete selected chats with confirmation
         IconButton(
           icon: Icon(Icons.delete_outline),
           onPressed: () {
@@ -98,18 +101,19 @@ class ChatHistoryScreen extends StatelessWidget {
             );
           },
         ),
-        // Cancel selection mode
+        // Exit selection mode
         IconButton(
           icon: Icon(Icons.close),
           onPressed: viewModel.cancelSelectionMode,
         ),
       ];
     } else {
-      // Return an empty list when not in selection mode
+      // No actions when not in selection mode
       return [];
     }
   }
   
+  /// Displays when there are no chat histories available
   Widget _buildEmptyState(BuildContext context, ThemeProvider themeProvider) {
     return Center(
       child: Column(
@@ -157,6 +161,7 @@ class ChatHistoryScreen extends StatelessWidget {
     );
   }
   
+  /// Builds the scrollable list of chat history items
   Widget _buildChatList(BuildContext context, ChatHistoryViewModel viewModel, ThemeProvider themeProvider) {
     // Sort chats: pinned first, then by date
     final sortedChats = List<Chat>.from(viewModel.filteredChats)
@@ -175,13 +180,14 @@ class ChatHistoryScreen extends StatelessWidget {
     );
   }
   
+  /// Creates an individual chat history item with selection and swipe actions
   Widget _buildChatItem(BuildContext context, ChatHistoryViewModel viewModel, int index, Chat chat) {
     final isSelected = viewModel.selectedChats.contains(chat.id);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     final formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(chat.createdAt);
     
-    // Wrap with Dismissible only if not pinned
+    // Build the chat card
     Widget chatCard = Card(
       color: isDarkTheme ? Color(0xFF1E1E1E) : Colors.white,
       elevation: 2,
@@ -254,6 +260,7 @@ class ChatHistoryScreen extends StatelessWidget {
           }
         },
         onLongPress: () {
+          // Start selection mode if not already in it
           if (!viewModel.isSelectionMode) {
             viewModel.startSelectionMode();
             viewModel.toggleChatSelection(chat.id);
@@ -282,15 +289,15 @@ class ChatHistoryScreen extends StatelessWidget {
         ),
         onDismissed: (direction) {
           viewModel.deleteChat(chat.id);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Chat deleted'),
-              action: SnackBarAction(
-                label: 'Undo',
-                onPressed: () {
-                  viewModel.undoDelete();
-                },
-              ),
+          StyledAlerts.showSnackBar(
+            context,
+            'Chat deleted',
+            type: AlertType.info,
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () {
+                viewModel.undoDelete();
+              },
             ),
           );
         },

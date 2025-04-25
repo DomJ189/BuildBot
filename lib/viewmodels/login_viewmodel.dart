@@ -21,7 +21,7 @@ class LoginViewModel extends ChangeNotifier {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = 'Login failed: $e';
+      errorMessage = e.toString();
       notifyListeners();
       return false;
     }

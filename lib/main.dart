@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
+import 'firebase_options.dart'; // Import the Firebase options
 import 'views/login_screen.dart'; // Import the Login Screen
 import 'views/chat_interface.dart'; // Import the Chat Interface
 import 'views/chat_history_screen.dart'; // Import the Chat History Screen
@@ -18,7 +19,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env"); // Load environment variables
-  await Firebase.initializeApp(); // Initialize Firebase
+  
+  // Initialize Firebase in a safe way
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    if (e.toString().contains('duplicate-app')) {
+      // Firebase already initialized, continue
+      print('Firebase already initialized');
+    } else {
+      // Rethrow if it's a different error
+      rethrow;
+    }
+  }
   
   // Get API credentials from environment variables
   final redditClientId = dotenv.env['REDDIT_CLIENT_ID'] ?? '';
@@ -96,40 +111,6 @@ void main() async {
       ),
     ),
   );
-}
-
-// Main application widget
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        Provider<ChatService>(create: (_) => ChatService()), //Provider for the chat service
-        ChangeNotifierProvider(create: (_) => ThemeProvider()), //Provider for the theme provider
-      ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return MaterialApp(
-            title: 'BuildBot',
-            theme: Provider.of<ThemeProvider>(context).currentTheme, // Set the theme for the app
-            initialRoute: '/', // Initial route for the app
-            routes: {
-              '/': (context) => LoginScreen(), // Login Screen
-              '/main': (context) => MainWrapper(), // Main Wrapper
-            },
-            onGenerateRoute: (settings) {
-              // Handle all other routes
-              return MaterialPageRoute(
-                builder: (context) => MainWrapper(currentIndex: getIndex(settings.name)),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
 }
 
 // Create a new MainWrapper widget

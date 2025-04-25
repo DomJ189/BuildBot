@@ -3,6 +3,7 @@ import '../viewmodels/account_details_viewmodel.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import 'forgot_password_screen.dart'; // Import Forgot Password Screen
+import '../widgets/styled_alert.dart';
 
 class ChangePasswordScreen extends StatelessWidget {
   final AccountDetailsViewModel viewModel;
@@ -235,12 +236,16 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
                           _newPasswordController.text,
                         );
                         Navigator.pop(context, true);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Password updated successfully')),
+                        StyledAlerts.showSnackBar(
+                          context,
+                          'Password updated successfully',
+                          type: AlertType.success,
                         );
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error updating password: $e')),
+                        StyledAlerts.showSnackBar(
+                          context,
+                          e.toString(),
+                          type: AlertType.error,
                         );
                       } finally {
                         if (mounted) {

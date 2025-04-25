@@ -34,8 +34,8 @@ class YouTubeService {
   
   Future<List<YouTubeVideo>> searchVideos(String query, {int maxResults = 3}) async {
     if (apiKey.isEmpty) {
-      print('Warning: YouTube API key is empty, this will cause issues fetching videos');
-      return _createFallbackVideos(query: query); // Pass the query to fallback videos
+      // Return fallback videos when API key is not configured
+      return _createFallbackVideos(query: query);
     }
     
     // Calculate date 2 years ago from now (for more recent videos)
@@ -52,9 +52,7 @@ class YouTubeService {
       query += ' comparison';
     }
     
-    // Print the final query for debugging
-    print('YouTube search query: $query');
-    
+    // Construct the YouTube API search URL with appropriate parameters
     final url = Uri.parse(
       'https://www.googleapis.com/youtube/v3/search?part=snippet&q=$query&type=video&maxResults=$maxResults&publishedAfter=$formattedDate&relevanceLanguage=en&videoEmbeddable=true&key=$apiKey'
     );
@@ -67,10 +65,11 @@ class YouTubeService {
         final items = data['items'] as List;
         
         if (items.isEmpty) {
-          print('YouTube search returned no results for: $query');
-          return _createFallbackVideos(query: query); // Pass the query to fallback videos
+          // No results found, return fallback videos
+          return _createFallbackVideos(query: query);
         }
         
+        // Map API response items to YouTubeVideo objects
         final videos = items.map((item) {
           final videoId = item['id']?['videoId'] as String?;
           if (videoId == null) {
@@ -91,7 +90,7 @@ class YouTubeService {
             try {
               publishedAt = DateTime.parse(snippet['publishedAt'] as String);
             } catch (e) {
-              debugPrint('Error parsing publishedAt date: $e');
+              // Failed to parse the date, use current date as fallback
             }
           }
           

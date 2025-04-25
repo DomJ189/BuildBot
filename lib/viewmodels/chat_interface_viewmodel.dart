@@ -9,41 +9,43 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/youtube_service.dart';
 
 class ChatInterfaceViewModel extends ChangeNotifier {
-  final List<Map<String, dynamic>> messages = [];
-  final BotService botService;
-  final ChatService chatService;
-  String? currentChatId;
-  String? currentChatTitle;
-  bool isBotTyping = false;
-  bool isScrollToBottomButtonVisible = false;
-  List<YouTubeVideo> currentVideos = [];
-  List<RedditPostPreview> currentRedditPosts = [];
+  // Core message storage and service dependencies
+  final List<Map<String, dynamic>> messages = []; // Stores all chat messages with metadata
+  final BotService botService;                    // API calls to Perplexity
+  final ChatService chatService;                  // Local/Firebase chat management
+  String? currentChatId;                          // ID of the active chat
+  String? currentChatTitle;                       // Title of the active chat
+  bool isBotTyping = false;                       // Controls typing animation display
+  bool isScrollToBottomButtonVisible = false;     // Controls scroll button visibility
+  List<YouTubeVideo> currentVideos = [];          // YouTube videos for current response
+  List<RedditPostPreview> currentRedditPosts = []; // Reddit posts for current response
   
   // Typing animation properties
-  String currentTypingText = '';
-  Timer? typingTimer;
-  String fullBotResponse = '';
-  int currentCharIndex = 0;
-  String typingSpeed = 'Medium';
+  String currentTypingText = '';                  // Partial text shown during typing animation
+  Timer? typingTimer;                             // Timer that controls typing animation speed
+  String fullBotResponse = '';                    // Complete text being animated
+  int currentCharIndex = 0;                       // Current position in typing animation
+  double typingSpeed = 1.5;                       // Speed multiplier for typing animation
   
-  // New property to track which message is being edited
-  int? editingMessageIndex;
+  // Edit functionality tracking
+  int? editingMessageIndex;                       // Index of message being edited (null if none)
   
+  // Constructor - initializes the ViewModel with dependencies and loads past chat if available
   ChatInterfaceViewModel({required this.chatService}) : 
-      // Initialize with API key from .env file
+      // Initialize BotService with API keys from environment variables
       botService = BotService(
         dotenv.env['PERPLEXITY_API_KEY'] ?? 'your-api-key',
         redditClientId: dotenv.env['REDDIT_CLIENT_ID'] ?? '',
         redditClientSecret: dotenv.env['REDDIT_CLIENT_SECRET'] ?? '',
       ) {
-    // Initialize with current chat if available
+    // Load existing chat if available
     if (chatService.currentChat != null) {
       currentChatId = chatService.currentChat!.id;
       currentChatTitle = chatService.currentChat!.title;
       
-      // Convert old format messages to new format    
+      // Convert stored chat messages to in-memory format    
       for (var message in chatService.currentChat!.messages) {
-        // Convert saved video data back to YouTubeVideo objects
+        // Reconstruct YouTubeVideo objects from stored data
         List<YouTubeVideo> videos = [];
         if (message.containsKey('videos') && message['videos'] != null) {
           try {
@@ -67,7 +69,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
         }
         
-        // Convert saved Reddit post data back to RedditPostPreview objects
+        // Reconstruct RedditPostPreview objects from stored data
         List<RedditPostPreview> redditPosts = [];
         if (message.containsKey('redditPosts') && message['redditPosts'] != null) {
           try {
@@ -91,6 +93,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
         }
         
+        // Add reconstructed message to in-memory list
         messages.add({
           'sender': message['sender'] ?? '',
           'message': message['message'] ?? '',
@@ -101,7 +104,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         });
       }
       
-      // Initialize bot service with conversation history
+      // Initialize API service with conversation history for context
       final botMessages = messages.map((m) => {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',
@@ -110,13 +113,13 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       botService.initializeConversationHistory(botMessages);
     }
     
-    // Load typing speed preference
+    // Load user preferences for typing speed
     loadTypingSpeed();
   }
   
-  // New methods for message editing functionality
+  // --- MESSAGE EDITING FUNCTIONALITY ---
   
-  // Start editing a message
+  // Begin editing a user message - sets the editing state
   void startEditingMessage(int index) {
     // Only allow editing user messages
     if (index >= 0 && index < messages.length && messages[index]['sender'] == 'user') {
@@ -125,13 +128,13 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     }
   }
   
-  // Cancel editing
+  // Cancel the message editing process
   void cancelEditingMessage() {
     editingMessageIndex = null;
     notifyListeners();
   }
   
-  // Update a message and regenerate bot response
+  // Update a message and regenerate the corresponding bot response
   Future<void> updateMessage(String updatedMessage) async {
     if (editingMessageIndex == null || editingMessageIndex! >= messages.length) {
       return;
@@ -139,7 +142,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     
     final oldMessage = messages[editingMessageIndex!]['message'] as String;
     
-    // If the message hasn't changed, just cancel editing
+    // Skip processing if message content hasn't changed
     if (oldMessage == updatedMessage) {
       cancelEditingMessage();
       return;
@@ -149,7 +152,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     messages[editingMessageIndex!]['message'] = updatedMessage;
     messages[editingMessageIndex!]['edited'] = true;
     
-    // Find the next bot message after this user message
+    // Find the next bot message that needs to be regenerated
     int nextBotIndex = -1;
     for (int i = editingMessageIndex! + 1; i < messages.length; i++) {
       if (messages[i]['sender'] == 'bot') {
@@ -169,25 +172,24 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       // Remove the bot message that will be regenerated
       final botMessage = messages.removeAt(nextBotIndex);
       
-      // Clear previous typing data and set bot typing state
+      // Reset UI state for new response
       isBotTyping = true;
-      currentTypingText = '';  // Ensure no previous text is displayed while regenerating
-      currentVideos = [];      // Clear any previous videos
-      currentRedditPosts = []; // Clear any previous Reddit posts
+      currentTypingText = '';  
+      currentVideos = [];      
+      currentRedditPosts = []; 
       notifyListeners();
       
       try {
-        // Include ALL messages up to but not including the bot message that will be regenerated
-        // This ensures proper context is maintained for the bot response
+        // Prepare conversation history for the API
         final botMessages = messages.map((m) => {
           'role': m['sender'] == 'user' ? 'user' : 'assistant',
           'content': m['message'] ?? '',
         }).toList();
         
-        // Get response from bot service with videos
+        // Get new response from the API
         final response = await botService.getResponseWithVideos(updatedMessage, botMessages);
         
-        // Process videos from response
+        // Process videos from the response
         List<YouTubeVideo> videos = [];
         if (response.containsKey('videos')) {
           try {
@@ -200,7 +202,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
         }
         
-        // Process Reddit posts from response
+        // Process Reddit posts from the response
         List<RedditPostPreview> redditPosts = [];
         if (response.containsKey('redditPosts')) {
           try {
@@ -213,7 +215,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
         }
         
-        // Add the regenerated bot message at the appropriate position
+        // Add the regenerated bot message back to the chat
         messages.insert(editedIndex! + 1, {
           'sender': 'bot',
           'message': response['text'],
@@ -222,31 +224,31 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           'regenerated': true, // Mark as regenerated
         });
         
-        // Remove any subsequent messages as they're now invalid
+        // Remove any subsequent messages as they're now out of context
         if (editedIndex! + 2 < messages.length) {
           messages.removeRange(editedIndex! + 2, messages.length);
         }
         
-        // Finish typing
+        // Update UI state
         isBotTyping = false;
         
-        // Update conversation history in bot service with all current messages
+        // Update API context with new conversation
         final updatedBotMessages = messages.map((m) => {
           'role': m['sender'] == 'user' ? 'user' : 'assistant',
           'content': m['message'] ?? '',
         }).toList();
         botService.initializeConversationHistory(updatedBotMessages);
         
-        // Save chat
+        // Save changes to storage
         _saveCurrentChat();
         
         notifyListeners();
       } catch (e) {
-        // Handle error
+        // Handle errors during regeneration
         print('Error updating message: $e');
         isBotTyping = false;
         
-        // If there was an error, add back the original message
+        // If there was an error, restore the original bot message
         if (editedIndex! + 1 <= messages.length) {
           messages.insert(editedIndex! + 1, botMessage);
         }
@@ -258,49 +260,65 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     }
   }
   
+  // --- TYPING ANIMATION CONFIGURATION ---
+  
+  // Calculate delay between typing animation updates based on speed setting
   int getTypingInterval() {
+    // Return milliseconds between typing animation updates
     switch (typingSpeed) {
-      case 'Slow': return 60;
-      case 'Fast': return 15;
-      case 'Medium': 
-      default: return 30;
+      case 0.5: return 60;  // Slow
+      case 2.5: return 15;  // Fast
+      case 1.5:             // Medium
+      default: return 30;   // Default to medium
     }
   }
   
+  // Calculate how many characters to add per typing update
   int getCharsPerUpdate() {
+    // Return number of characters to add each typing animation step
     switch (typingSpeed) {
-      case 'Slow': return 3;
-      case 'Fast': return 10;
-      case 'Medium': 
-      default: return 5;
+      case 0.5: return 3;   // Slow
+      case 2.5: return 10;  // Fast
+      case 1.5:             // Medium
+      default: return 5;    // Default to medium
     }
   }
   
-  void setTypingSpeed(String speed) {
+  // Update typing speed preference
+  void setTypingSpeed(double speed) {
     typingSpeed = speed;
+    saveTypingSpeed();
     notifyListeners();
   }
   
+  // Save typing speed to persistent storage
   Future<void> saveTypingSpeed() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('typing_speed', typingSpeed);
+    await prefs.setDouble('typing_speed', typingSpeed);
   }
   
+  // Load typing speed from persistent storage
   Future<void> loadTypingSpeed() async {
     final prefs = await SharedPreferences.getInstance();
-    typingSpeed = prefs.getString('typing_speed') ?? 'Medium';
+    typingSpeed = prefs.getDouble('typing_speed') ?? 1.5;
     notifyListeners();
   }
   
+  // --- UI CONTROLS ---
+  
+  // Control visibility of the scroll-to-bottom button
   void setScrollButtonVisibility(bool visible) {
     isScrollToBottomButtonVisible = visible;
     notifyListeners();
   }
   
+  // --- CORE MESSAGING FUNCTIONALITY ---
+  
+  // Process a new user message and get AI response
   Future<void> sendMessage(String message) async {
     if (message.trim().isEmpty) return;
     
-    // Add user message to the list
+    // Add user message to the chat
     messages.add({
       'sender': 'user', 
       'message': message,
@@ -309,36 +327,34 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     });
     notifyListeners();
     
-    // Clear previous typing data and set bot typing state
+    // Reset UI state for new response
     isBotTyping = true;
-    currentTypingText = '';  // Ensure no previous text is displayed while waiting
-    currentVideos = [];      // Clear any previous videos
-    currentRedditPosts = []; // Clear any previous reddit posts
+    currentTypingText = '';
+    currentVideos = [];
+    currentRedditPosts = [];
     notifyListeners();
     
     try {
-      // Create or update chat
+      // Create new chat or use existing one
       if (currentChatId == null) {
         final chat = await chatService.createChat(_generateChatTitle(message));
         currentChatId = chat.id;
         currentChatTitle = chat.title;
       }
       
-      // Convert ALL previous messages to format expected by BotService
-      // This ensures the bot has complete conversation history for context
+      // Prepare conversation history for API
       final botMessages = messages.map((m) => {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',
       }).toList();
       
-      // Get response from bot service
+      // Get AI response with enhanced content
       final response = await botService.getResponseWithVideos(message, botMessages);
       
-      // Process videos from response if using getResponseWithVideos
+      // Process videos from the response
       List<YouTubeVideo> videos = [];
       if (response.containsKey('videos')) {
         try {
-          // Explicitly convert dynamic list to YouTubeVideo list
           final videoList = response['videos'] as List<dynamic>;
           if (videoList.isNotEmpty) {
             videos = videoList.map((v) => v as YouTubeVideo).toList();
@@ -348,7 +364,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         }
       }
       
-      // Process Reddit posts from response
+      // Process Reddit posts from the response
       List<RedditPostPreview> redditPosts = [];
       if (response.containsKey('redditPosts')) {
         try {
@@ -381,22 +397,20 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         }
       }
       
-      // Check if this is likely a conversational response
+      // Skip videos for simple replies like "thank you"
       bool isConversationalResponse = _isLikelyConversationalResponse(message);
-      
-      // Don't show previously shown videos for conversational responses
       if (isConversationalResponse) {
         videos = [];
         redditPosts = [];
       }
       
-      // Start typing animation with videos and Reddit posts
+      // Begin typing animation with the response content
       startTypingAnimation(response['text'], videos, redditPosts);
       
-      // Save chat to service
+      // Save chat to persistent storage
       _saveCurrentChat();
     } catch (e) {
-      // Handle error
+      // Handle error in getting AI response
       isBotTyping = false;
       messages.add({
         'sender': 'bot', 
@@ -411,8 +425,9 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     }
   }
   
-  // Helper method to check if a message is likely a simple conversational response
+  // Determines if a message is a simple conversational response
   bool _isLikelyConversationalResponse(String message) {
+    // List of common phrases that don't need enhanced content
     final conversationalPhrases = [
       'thank you', 'thanks', 'ok', 'okay', 'got it', 'understood', 'great',
       'good', 'perfect', 'excellent', 'awesome', 'nice', 'cool', 'sounds good',
@@ -423,7 +438,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     
     final lowerMessage = message.toLowerCase().trim();
     
-    // Check if the message consists only of conversational phrases
+    // Check if the message matches any conversational phrase pattern
     return conversationalPhrases.any((phrase) => 
       lowerMessage == phrase || 
       lowerMessage.startsWith('$phrase.') || 
@@ -432,27 +447,27 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     );
   }
   
+  // Start the typing animation for bot response
   void startTypingAnimation(String response, List<YouTubeVideo> videos, List<RedditPostPreview> redditPosts) {
-    // Reset all typing-related variables to ensure previous response doesn't show
+    // Initialize animation state
     fullBotResponse = response;
     currentCharIndex = 0;
-    currentTypingText = '';  // Clear the current typing text
+    currentTypingText = '';
     currentVideos = videos.isNotEmpty ? videos : [];
     currentRedditPosts = redditPosts.isNotEmpty ? redditPosts : [];
     
-    // Cancel any existing timer
+    // Cancel any existing animation
     typingTimer?.cancel();
     
-    // Start new timer for typing animation
+    // Start new animation timer
     typingTimer = Timer.periodic(Duration(milliseconds: getTypingInterval()), (timer) {
       if (currentCharIndex < fullBotResponse.length) {
-        // Calculate how many characters to add in this update
+        // Add the next chunk of text
         final charsToAdd = getCharsPerUpdate();
         final endIndex = (currentCharIndex + charsToAdd) < fullBotResponse.length 
             ? currentCharIndex + charsToAdd 
             : fullBotResponse.length;
             
-        // Add characters to the current typing text
         currentTypingText += fullBotResponse.substring(currentCharIndex, endIndex);
         currentCharIndex = endIndex;
         
@@ -462,7 +477,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         timer.cancel();
         isBotTyping = false;
         
-        // Add the complete message to the list
+        // Add the complete message to chat
         messages.add({
           'sender': 'bot', 
           'message': fullBotResponse,
@@ -478,13 +493,14 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     });
   }
   
+  // Save current chat to persistent storage
   void _saveCurrentChat() {
     if (currentChatId != null && currentChatTitle != null) {
-      // Convert messages to the format expected by Chat model
+      // Convert in-memory message format to storage format
       final chatMessages = messages.map((m) => {
         'sender': m['sender'] ?? '',
         'message': m['message'] ?? '',
-        // Store video data as serializable objects
+        // Convert videos to serializable format
         'videos': (m['videos'] as List<dynamic>?)?.map((video) {
           if (video is YouTubeVideo) {
             return {
@@ -497,7 +513,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
           return null;
         }).whereType<Map<String, dynamic>>().toList() ?? [],
-        // Store Reddit post data as serializable objects
+        // Convert Reddit posts to serializable format
         'redditPosts': (m['redditPosts'] as List<dynamic>?)?.map((post) {
           if (post is RedditPostPreview) {
             return {
@@ -511,10 +527,11 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
           return null;
         }).whereType<Map<String, dynamic>>().toList() ?? [],
-        // Add an edited flag for messages that were edited
+        // Preserve edit status
         'edited': m.containsKey('edited') ? m['edited'] : false,
       }).toList();
 
+      // Create Chat object for storage
       final chat = Chat(
         id: currentChatId!,
         title: currentChatTitle!,
@@ -526,12 +543,13 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     }
   }
   
+  // Generate a title for new chats based on first message
   String _generateChatTitle(String message) {
-    // Generate a title based on the first message
     if (message.length <= 20) return message;
     return '${message.substring(0, 20)}...';
   }
   
+  // Reset the chat to empty state
   void clearChat() {
     messages.clear();
     currentChatId = null;
@@ -542,19 +560,22 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Clean up resources when ViewModel is no longer needed
   @override
   void dispose() {
     typingTimer?.cancel();
     super.dispose();
   }
   
-  // User information
+  // Get user initial for avatar display
   String get userInitial {
     final displayName = chatService.currentUserDisplayName;
     return displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
   }
   
-  // Add regenerateMessage method
+  // --- REGENERATION FUNCTIONALITY ---
+  
+  // Regenerate a bot message with fresh API call
   Future<void> regenerateMessage(int botMessageIndex) async {
     if (botMessageIndex < 0 || botMessageIndex >= messages.length) {
       return;
@@ -565,7 +586,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       return;
     }
 
-    // Find the previous user message that triggered this bot response
+    // Find the user message that triggered this response
     int previousUserIndex = -1;
     for (int i = botMessageIndex - 1; i >= 0; i--) {
       if (messages[i]['sender'] == 'user') {
@@ -578,31 +599,30 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       return; // No user message found to regenerate from
     }
 
-    // Store the current message index before removing it
+    // Store the current index before removing the message
     final currentBotMessageIndex = botMessageIndex;
     
     // Remove the bot message that will be regenerated
     final botMessage = messages.removeAt(botMessageIndex);
     
-    // Clear previous typing data and set bot typing state
+    // Reset UI state for new response
     isBotTyping = true;
-    currentTypingText = '';  // Ensure no previous text is displayed while regenerating
-    currentVideos = [];      // Clear any previous videos
-    currentRedditPosts = []; // Clear any previous Reddit posts
+    currentTypingText = '';
+    currentVideos = [];
+    currentRedditPosts = [];
     notifyListeners();
     
     try {
-      // Get the user message that triggered this response
+      // Get the original user message that prompted this response
       final userMessage = messages[previousUserIndex]['message'] as String;
       
-      // Include ALL messages up to the bot message for complete context
-      // This ensures the bot has the full conversation history for better context preservation
+      // Prepare conversation history for API
       final botMessages = messages.map((m) => {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',
       }).toList();
       
-      // Get new response from bot service with videos
+      // Get new response from API
       final response = await botService.getResponseWithVideos(userMessage, botMessages);
       
       // Process videos from response
@@ -631,7 +651,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         }
       }
       
-      // Add the regenerated bot message back to the list
+      // Add regenerated message to chat
       messages.insert(previousUserIndex + 1, {
         'sender': 'bot',
         'message': response['text'],
@@ -640,31 +660,31 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         'regenerated': true, // Mark as regenerated
       });
       
-      // Remove any subsequent messages as they're now invalid
+      // Remove any subsequent messages as they're now out of context
       if (previousUserIndex + 2 < messages.length) {
         messages.removeRange(previousUserIndex + 2, messages.length);
       }
       
-      // Finish typing
+      // Update UI state
       isBotTyping = false;
       
-      // Update conversation history in bot service with all current messages
+      // Update API context with new conversation
       final updatedBotMessages = messages.map((m) => {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',
       }).toList();
       botService.initializeConversationHistory(updatedBotMessages);
       
-      // Save chat
+      // Save changes to storage
       _saveCurrentChat();
       
       notifyListeners();
     } catch (e) {
-      // Handle error
+      // Handle errors during regeneration
       print('Error regenerating message: $e');
       isBotTyping = false;
       
-      // If there was an error, add back the original message
+      // If there was an error, restore the original message
       if (currentBotMessageIndex <= messages.length) {
         messages.insert(currentBotMessageIndex, botMessage);
       }

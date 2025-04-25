@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../viewmodels/account_details_viewmodel.dart';
+import '../widgets/styled_alert.dart';
 
 // Allows users to edit their profile information
 class EditProfileScreen extends StatefulWidget {
@@ -140,15 +141,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       if (fullName.isNotEmpty) {
                         try {
                           await widget.viewModel.updateDisplayName(fullName);
+                          // Show success message
+                          StyledAlerts.showSnackBar(
+                            context,
+                            'Profile updated successfully',
+                            type: AlertType.success,
+                          );
                           Navigator.pop(context, true); // Return success
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error updating profile: $e')),
+                          // Show error message
+                          StyledAlerts.showSnackBar(
+                            context,
+                            'Error updating profile: ${_getReadableErrorMessage(e.toString())}',
+                            type: AlertType.error,
                           );
                         }
                       } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Name cannot be empty')),
+                        // Show warning message
+                        StyledAlerts.showSnackBar(
+                          context,
+                          'Name cannot be empty',
+                          type: AlertType.warning,
                         );
                       }
                     },
@@ -176,5 +189,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
     );
+  }
+
+  // Helper method to convert Firebase errors to user-friendly messages
+  String _getReadableErrorMessage(String error) {
+    if (error.contains('network-request-failed')) {
+      return 'Network error, please check your internet connection';
+    } else if (error.contains('requires-recent-login')) {
+      return 'For security reasons, please log out and log in again before updating your profile';
+    } else {
+      return 'Failed to update profile. Please try again later.';
+    }
   }
 } 

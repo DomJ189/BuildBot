@@ -1,52 +1,71 @@
 import 'package:flutter/material.dart';
-import '../viewmodels/theme_provider_viewmodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 
-// Manages the current theme of the application
+/// Manages the application's theme state and persistence.
+/// This provider handles loading, storing, and changing themes throughout the app.
 class ThemeProvider extends ChangeNotifier {
-  final ThemeProviderViewModel _viewModel = ThemeProviderViewModel();
-  bool isDarkMode = false;
+  ThemeData _currentTheme = AppTheme.defaultTheme;
   
-  ThemeData get currentTheme => _viewModel.currentTheme;
+  /// The currently active theme
+  ThemeData get currentTheme => _currentTheme;
   
+  /// Whether the app is currently using a dark theme
+  bool get isDarkMode => _currentTheme.brightness == Brightness.dark;
+  
+  /// Constructor initializes the provider and loads saved theme
   ThemeProvider() {
-    _viewModel.addListener(_onViewModelChanged);
-    _loadThemePreference();
+    loadTheme();
   }
   
-  Future<void> _loadThemePreference() async {
+  /// Loads the saved theme preference from persistent storage
+  Future<void> loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    isDarkMode = prefs.getBool('dark_mode') ?? false;
+    final themeName = prefs.getString('theme') ?? 'default';
+    
+    switch (themeName) {
+      case 'dark':
+        _currentTheme = AppTheme.darkTheme;
+        break;
+      case 'light':
+        _currentTheme = AppTheme.lightTheme;
+        break;
+      default:
+        _currentTheme = AppTheme.defaultTheme;
+    }
+    
+    notifyListeners();
+  }
+  
+  /// Sets a specific theme and saves the preference
+  void setTheme(ThemeData theme) {
+    _currentTheme = theme;
+    _saveTheme();
+    notifyListeners();
+  }
+  
+  /// Toggles between light and dark themes
+  void toggleTheme() {
     if (isDarkMode) {
-      _viewModel.setTheme(ThemeData.dark());
+      setTheme(AppTheme.defaultTheme);
     } else {
-      _viewModel.setTheme(AppTheme.defaultTheme);
+      setTheme(AppTheme.darkTheme);
     }
   }
   
-  void setTheme(ThemeData theme) {
-    _viewModel.setTheme(theme);
-  }
-  
-  void _onViewModelChanged() {
-    notifyListeners();
-  }
-  
-  void toggleTheme() {
-    isDarkMode = !isDarkMode;
-    _saveThemePreference();
-    notifyListeners();
-  }
-  
-  Future<void> _saveThemePreference() async {
+  /// Saves the current theme preference to persistent storage
+  Future<void> _saveTheme() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    if (_currentTheme == AppTheme.darkTheme) {
+      await prefs.setString('theme', 'dark');
+    } else if (_currentTheme == AppTheme.lightTheme || _currentTheme == AppTheme.defaultTheme) {
+      await prefs.setString('theme', 'light');
+    } else {
+      await prefs.setString('theme', 'default');
+    }
+    
+    // Also update the legacy dark_mode value for backward compatibility
     await prefs.setBool('dark_mode', isDarkMode);
-  }
-  
-  @override
-  void dispose() {
-    _viewModel.removeListener(_onViewModelChanged);
-    super.dispose();
   }
 } 

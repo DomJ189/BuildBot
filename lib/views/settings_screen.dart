@@ -9,7 +9,7 @@ import '../views/data_controls_screen.dart';
 import '../views/about_buildbot_screen.dart';
 
 
-// Displays user settings and preferences
+/// App settings screen that provides access to user preferences,account management, and application information.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -18,7 +18,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Add this to force a rebuild when needed
+  // Forces UI to update when settings change
   void _refreshScreen() {
     setState(() {});
   }
@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: SafeArea(
         child: ListView(
           children: [
-            // Settings title
+            // Settings header with title
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -46,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             
-            // Account section
+            // Account management section
             _buildSettingItem(
               context,
               icon: Icons.person_outline,
@@ -74,7 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             
-            // App Appearance
+            // Theme selection option
             _buildSettingItem(
               context,
               icon: Icons.palette_outlined,
@@ -103,7 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             
-            // Data Controls
+            // Data retention and privacy controls
             _buildSettingItem(
               context,
               icon: Icons.storage_outlined,
@@ -139,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'About BuildBot',
               showArrow: true,
               onTap: () {
-                // Navigate to the About BuildBot screen instead of showing a dialog
+                // Navigate to the About BuildBot screen
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => AboutBuildBotScreen()),
@@ -165,6 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
   
+  /// Builds a consistent settings list item with optional icon, arrow, and subtitle
   Widget _buildSettingItem(
     BuildContext context, {
     required IconData icon,
@@ -214,127 +215,116 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onTap: onTap,
     );
   }
-
-  String _getTypingSpeedText(double typingSpeed) {
-    if (typingSpeed < 1.0) {
-      return 'Slow';
-    } else if (typingSpeed > 2.0) {
-      return 'Fast';
-    } else {
-      return 'Medium';
-    }
+  
+  /// Converts typing speed value to human-readable text
+  String _getTypingSpeedText(double? speed) {
+    if (speed == null) return 'Medium';
+    
+    if (speed <= 0.5) return 'Slow';
+    if (speed >= 2.5) return 'Fast';
+    return 'Medium';
   }
-
-  void _showTypingSpeedDialog(
-    BuildContext context, 
-    ChatService chatService,
-    VoidCallback onRefresh
-  ) {
+  
+  /// Shows dialog to adjust bot typing animation speed
+  void _showTypingSpeedDialog(BuildContext context, ChatService chatService, VoidCallback onSettingsChanged) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.currentTheme.brightness == Brightness.dark;
     
-    // Store the initially selected speed to restore if canceled
-    final initialSpeed = _getTypingSpeedText(chatService.typingSpeed);
-    // Create a temporary variable to track the selected speed
-    String selectedSpeed = initialSpeed;
+    double selectedSpeed = chatService.typingSpeed ?? 1.5;
     
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: isDarkMode ? Color(0xFF212121) : Colors.white,
-          title: Text(
-            'Set Bot Typing Speed',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildSpeedOptionWithState(context, 'Slow', selectedSpeed, (speed) {
-                setState(() => selectedSpeed = speed);
-              }, isDarkMode),
-              _buildSpeedOptionWithState(context, 'Medium', selectedSpeed, (speed) {
-                setState(() => selectedSpeed = speed);
-              }, isDarkMode),
-              _buildSpeedOptionWithState(context, 'Fast', selectedSpeed, (speed) {
-                setState(() => selectedSpeed = speed);
-              }, isDarkMode),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                // Restore original speed if canceled
-                if (selectedSpeed != initialSpeed) {
-                  chatService.setTypingSpeed(
-                    initialSpeed == 'Slow' ? 0.5 : initialSpeed == 'Fast' ? 3.0 : 1.5
-                  );
-                }
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Cancel',
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: isDarkMode ? Color(0xFF333333) : Colors.white,
+              title: Text(
+                'Bot Typing Speed',
                 style: TextStyle(
-                  color: isDarkMode ? Colors.white70 : Colors.black87,
-                  fontSize: 16,
+                  color: isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDarkMode ? Colors.white : Colors.blue,
-                foregroundColor: isDarkMode ? Color(0xFF333333) : Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Adjust how fast the bot responses appear during typing animation.',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Slow',
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                      Text(
+                        'Fast',
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: selectedSpeed,
+                    min: 0.5,
+                    max: 2.5,
+                    divisions: 2,
+                    activeColor: isDarkMode ? Colors.white : Colors.blue,
+                    inactiveColor: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedSpeed = value;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    _getTypingSpeedText(selectedSpeed),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ],
               ),
-              onPressed: () {
-                // Apply the selected speed
-                chatService.setTypingSpeed(
-                  selectedSpeed == 'Slow' ? 0.5 : selectedSpeed == 'Fast' ? 3.0 : 1.5
-                );
-                Navigator.pop(context);
-                onRefresh(); // Call the refresh callback
-              },
-              child: Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSpeedOptionWithState(
-    BuildContext context, 
-    String speed, 
-    String selectedSpeed,
-    Function(String) onSelect,
-    bool isDarkMode
-  ) {
-    final isSelected = selectedSpeed == speed;
-    
-    return InkWell(
-      onTap: () => onSelect(speed),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? (isDarkMode ? Color(0xFF424242) : Colors.grey[300]) 
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          speed,
-          style: TextStyle(
-            fontSize: 18,
-            color: isDarkMode ? Colors.white : Colors.black,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
+              actions: [
+                TextButton(
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDarkMode ? Colors.white : Colors.blue,
+                    foregroundColor: isDarkMode ? Colors.black : Colors.white,
+                  ),
+                  child: Text('Save'),
+                  onPressed: () async {
+                    chatService.setTypingSpeed(selectedSpeed);
+                    Navigator.of(context).pop();
+                    onSettingsChanged();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 } 

@@ -1,0 +1,2 @@
+C:/Users/domin/Build-Bot/android/app/.cxx/Debug/2u205p70/x86/CMakeFiles/edit_cache.dir
+C:/Users/domin/Build-Bot/android/app/.cxx/Debug/2u205p70/x86/CMakeFiles/rebuild_cache.dir

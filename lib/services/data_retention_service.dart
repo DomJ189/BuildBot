@@ -10,7 +10,7 @@ class DataRetentionService {
   Future<void> applyDataRetentionPolicy() async {
     final user = _auth.currentUser;
     if (user == null) {
-      print('[DataRetentionService] No user logged in, skipping policy application');
+      // No need to log this every time
       return;
     }
     
@@ -26,20 +26,12 @@ class DataRetentionService {
     ].contains(deletionPeriod)) {
       deletionPeriod = 'Never delete';
       await prefs.setString('auto_deletion_period', deletionPeriod);
+      // Keep this as it's important for configuration issues
       print('[DataRetentionService] Corrected invalid auto-deletion period to "Never delete"');
     }
     
-    print('[DataRetentionService] Applying data retention policy with period: $deletionPeriod');
-    
-    // If chat saving is disabled, we don't need to check for deletion
-    if (!saveChatHistory) {
-      print('[DataRetentionService] Chat saving is disabled, skipping deletion check');
-      return;
-    }
-    
-    // If set to never delete, exit early
-    if (deletionPeriod == 'Never delete') {
-      print('[DataRetentionService] Auto-deletion is set to "Never delete", skipping');
+    // If chat saving is disabled or set to never delete, exit early
+    if (!saveChatHistory || deletionPeriod == 'Never delete') {
       return;
     }
     
@@ -47,28 +39,21 @@ class DataRetentionService {
     final now = DateTime.now();
     DateTime cutoffDate;
     
+    // Determine the cutoff date based on retention period
     if (deletionPeriod == '24 hours') {
       cutoffDate = now.subtract(Duration(hours: 24));
-      print('[DataRetentionService] Using 24 hour deletion period, cutoff: $cutoffDate');
     } else if (deletionPeriod == '15 days') {
       cutoffDate = now.subtract(Duration(days: 15));
-      print('[DataRetentionService] Using 15 day deletion period, cutoff: $cutoffDate');
     } else if (deletionPeriod == '30 days') {
       cutoffDate = now.subtract(Duration(days: 30));
-      print('[DataRetentionService] Using 30 day deletion period, cutoff: $cutoffDate');
     } else if (deletionPeriod == '60 days') {
       cutoffDate = now.subtract(Duration(days: 60));
-      print('[DataRetentionService] Using 60 day deletion period, cutoff: $cutoffDate');
     } else if (deletionPeriod == '90 days') {
       cutoffDate = now.subtract(Duration(days: 90));
-      print('[DataRetentionService] Using 90 day deletion period, cutoff: $cutoffDate');
     } else {
       // Default to 30 days if setting is unrecognized
       cutoffDate = now.subtract(Duration(days: 30));
-      print('[DataRetentionService] Unrecognized period setting: $deletionPeriod, defaulting to 30 days');
     }
-    
-    print('[DataRetentionService] Cutoff date for deletion: $cutoffDate');
     
     // Get all chats and filter manually (more reliable than query)
     final allChats = await _firestore
@@ -77,49 +62,40 @@ class DataRetentionService {
         .collection('chats')
         .get();
     
-    print('[DataRetentionService] Found ${allChats.docs.length} total chats to check');
-    
     // Find documents to delete by manually checking their dates
     List<DocumentSnapshot> docsToDelete = [];
     for (var doc in allChats.docs) {
       try {
         final data = doc.data() as Map<String, dynamic>;
-        print('[DataRetentionService] Checking chat: ${data['title'] ?? 'Untitled'}');
         
         final chatDateStr = data['createdAt'] as String?;
         if (chatDateStr != null) {
           final chatDate = DateTime.parse(chatDateStr);
-          print('[DataRetentionService] Chat date: $chatDate, is before cutoff: ${chatDate.isBefore(cutoffDate)}');
           
           if (chatDate.isBefore(cutoffDate)) {
             docsToDelete.add(doc);
-            print('[DataRetentionService] Adding chat for deletion: ${data['title']} created at $chatDate');
           }
-        } else {
-          print('[DataRetentionService] No createdAt date found for chat: ${data['title'] ?? 'Untitled'}');
         }
       } catch (e) {
+        // Log errors but be less verbose
         print('[DataRetentionService] Error processing document: $e');
       }
     }
     
     // If no chats to delete, exit
     if (docsToDelete.isEmpty) {
-      print('[DataRetentionService] No chats found to delete');
       return;
     }
-    
-    print('[DataRetentionService] Preparing to delete ${docsToDelete.length} chats');
     
     // Delete old chats in a batch
     final batch = _firestore.batch();
     for (var doc in docsToDelete) {
       batch.delete(doc.reference);
-      final data = doc.data() as Map<String, dynamic>;
-      print('[DataRetentionService] Adding deletion operation for: ${data['title'] ?? 'Untitled'}');
     }
     
     await batch.commit();
+    
+    // Keep this log as it's useful to know what was deleted
     print('[DataRetentionService] Successfully deleted ${docsToDelete.length} old chats');
   }
 } 

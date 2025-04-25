@@ -3,6 +3,7 @@ import '../viewmodels/account_details_viewmodel.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import 'forgot_password_screen.dart';
+import '../widgets/styled_alert.dart';
 
 class ChangeEmailScreen extends StatelessWidget {
   final AccountDetailsViewModel viewModel;
@@ -184,12 +185,16 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
                           _passwordController.text,
                         );
                         Navigator.pop(context, true);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Email updated successfully')),
+                        StyledAlerts.showSnackBar(
+                          context,
+                          'Email updated successfully',
+                          type: AlertType.success,
                         );
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error updating email: $e')),
+                        StyledAlerts.showSnackBar(
+                          context,
+                          e.toString(),
+                          type: AlertType.error,
                         );
                       } finally {
                         if (mounted) {

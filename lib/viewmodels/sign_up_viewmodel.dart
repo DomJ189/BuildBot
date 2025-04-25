@@ -27,7 +27,7 @@ class SignUpViewModel extends ChangeNotifier {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = 'Registration failed: $e';
+      errorMessage = e.toString();
       notifyListeners();
       return false;
     }
