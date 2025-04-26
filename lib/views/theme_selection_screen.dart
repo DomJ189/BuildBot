@@ -5,21 +5,21 @@ import '../providers/theme_provider.dart';
 import '../viewmodels/theme_selection_viewmodel.dart';
 import '../widgets/styled_alert.dart';
 
-/// Allows users to select and apply themes
+/// Screen for selecting and applying app themes
 class ThemeSelectionScreen extends StatelessWidget {
   const ThemeSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Access the app's theme provider to get and set themes
+    // Get theme provider for styling
     final themeProvider = Provider.of<ThemeProvider>(context);
     
     return ChangeNotifierProvider(
-      // Create a view model initialized with the current theme
+      // Create view model with current theme
       create: (_) => ThemeSelectionViewModel(themeProvider.currentTheme),
       child: Consumer<ThemeSelectionViewModel>(
         builder: (context, viewModel, child) {
-          // Use the current app theme for the screen itself
+          // Get current app theme
           final currentTheme = themeProvider.currentTheme;
           
           return Scaffold(
@@ -52,7 +52,7 @@ class ThemeSelectionScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         _buildPreviewArea(viewModel), // Build the preview area with selected theme
                         const SizedBox(height: 32),
-                        // Theme selection section header
+                        // Theme selection header
                         Text(
                           'Choose a theme',
                           style: TextStyle(
@@ -62,8 +62,7 @@ class ThemeSelectionScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Theme Options
-                        // Light Theme Option
+                        // Light theme option
                         _buildThemeOption(
                           context,
                           title: 'Light Theme',
@@ -74,7 +73,7 @@ class ThemeSelectionScreen extends StatelessWidget {
                             viewModel.setSelectedTheme(AppTheme.defaultTheme);
                           },
                         ),
-                        // Dark Theme Option
+                        // Dark theme option
                         _buildThemeOption(
                           context,
                           title: 'Dark Theme',
@@ -86,12 +85,12 @@ class ThemeSelectionScreen extends StatelessWidget {
                           },
                         ),
                         const SizedBox(height: 32),
-                        // Save button to apply the selected theme
+                        // Save button to apply theme
                         ElevatedButton(
                           onPressed: () async {
-                            // Save the selected theme using the view model
+                            // Save selected theme
                             await viewModel.saveSelectedTheme();
-                            // Apply the selected theme using the provider
+                            // Apply the theme
                             themeProvider.setTheme(viewModel.selectedTheme);
                             if (context.mounted) {
                               Navigator.pop(context);
@@ -126,7 +125,7 @@ class ThemeSelectionScreen extends StatelessWidget {
     );
   }
 
-  /// Builds a preview of the chat interface using the selected theme. This helps users visualize how the theme will look in the actual app
+  /// Builds a preview of the chat interface with selected theme
   Widget _buildPreviewArea(ThemeSelectionViewModel viewModel) {
     final isDarkTheme = viewModel.selectedTheme.brightness == Brightness.dark;
     
@@ -180,13 +179,13 @@ class ThemeSelectionScreen extends StatelessWidget {
               ],
             ),
           ),
-          // Mock chat conversation preview
+          // Mock chat conversation
           Container(
             height: 200,
             padding: const EdgeInsets.all(8),
             child: Column(
               children: [
-                // User message bubble example
+                // User message bubble
                 Align(
                   alignment: Alignment.centerRight,
                   child: Container(
@@ -202,7 +201,7 @@ class ThemeSelectionScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Bot response bubble example
+                // Bot response bubble
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Container(
@@ -220,7 +219,7 @@ class ThemeSelectionScreen extends StatelessWidget {
                   ),
                 ),
                 Spacer(),
-                // Message input field example
+                // Message input field
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
@@ -239,7 +238,7 @@ class ThemeSelectionScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // Send button example
+                      // Send button
                       Container(
                         width: 40,
                         height: 40,
@@ -268,11 +267,6 @@ class ThemeSelectionScreen extends StatelessWidget {
   }
 
   /// Builds a selectable theme option card
-  /// 
-  /// Each card displays:
-  /// - A color preview circle showing the theme's primary color
-  /// - The theme name
-  /// - A check mark on the currently selected theme
   Widget _buildThemeOption(
     BuildContext context, {
     required String title,
@@ -284,7 +278,7 @@ class ThemeSelectionScreen extends StatelessWidget {
     final isDarkTheme = currentTheme.brightness == Brightness.dark;
     
     return Card(
-      // Change background color based on selection state and current theme
+      // Background color based on selection state
       color: isDarkTheme 
           ? (isSelected ? Color(0xFF424242) : Color(0xFF2D2D2D))
           : (isSelected ? colors.primaryColor.withAlpha(26) : Colors.white),
@@ -299,7 +293,7 @@ class ThemeSelectionScreen extends StatelessWidget {
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        // Theme color preview circle
+        // Theme color preview
         leading: Container(
           width: 40,
           height: 40,
@@ -310,14 +304,14 @@ class ThemeSelectionScreen extends StatelessWidget {
             shape: BoxShape.circle,
           ),
         ),
-        // Show check mark for selected theme
+        // Show checkmark if selected
         trailing: isSelected
             ? Icon(
                 Icons.check_circle, 
                 color: isDarkTheme ? Colors.white : colors.primaryColor,
               )
             : null,
-        onTap: onTap, // Handle theme selection
+        onTap: onTap, // Handle selection
       ),
     );
   }

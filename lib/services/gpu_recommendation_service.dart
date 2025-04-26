@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as parser;
 import '../models/gpu_model.dart';
 
+// Provides GPU recommendations by scraping real-time pricing and performance data
 class GPURecommendationService {
   static const String _baseUrl = 'https://bestvaluegpu.com';
   

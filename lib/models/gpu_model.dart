@@ -1,11 +1,12 @@
+// Represents a graphics card with performance and pricing details
 class GPU {
-  final String name;
-  final String wattage;
-  final String vram;
-  final int benchmark;
-  final double price;
-  final int value;
-  final String url;
+  final String name;      // Full model name
+  final String wattage;   // Power consumption
+  final String vram;      // Video memory capacity
+  final int benchmark;    // Performance benchmark score
+  final double price;     // Current market price
+  final int value;        // Price-to-performance ratio
+  final String url;       // Link to more details
 
   GPU({
     required this.name,
@@ -23,9 +24,10 @@ class GPU {
   }
 }
 
+// Pairs a GPU with a budget category for recommendations
 class GPURecommendation {
-  final String budget;
-  final GPU gpu;
+  final String budget;    // Budget category (e.g. "Under $300")
+  final GPU gpu;          // Recommended GPU for this budget
   
   GPURecommendation({
     required this.budget,

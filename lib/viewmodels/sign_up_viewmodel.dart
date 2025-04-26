@@ -1,35 +1,36 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+// Manages account creation logic
 class SignUpViewModel extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  bool isLoading = false;
-  String? errorMessage;
+  bool isLoading = false;  // Tracks registration progress
+  String? errorMessage;    // Stores error messages for display
 
-  // Function to handle user registration
+  // Creates a new user account and profile
   Future<bool> signUp(String email, String password, String firstName, String lastName) async {
     try {
       isLoading = true;
       notifyListeners();
       
-      // Sign up using Firebase Authentication
+      // Create user in Firebase Auth
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email, 
         password: password
       );
       
-      // Update the user's display name
+      // Set user's display name
       await userCredential.user?.updateDisplayName('$firstName $lastName');
       
       isLoading = false;
       errorMessage = null;
       notifyListeners();
-      return true;
+      return true;  // Registration successful
     } catch (e) {
       isLoading = false;
       errorMessage = e.toString();
       notifyListeners();
-      return false;
+      return false;  // Registration failed
     }
   }
 } 

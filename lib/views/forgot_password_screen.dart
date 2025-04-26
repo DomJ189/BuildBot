@@ -6,7 +6,7 @@ import '../viewmodels/forgot_password_viewmodel.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/styled_alert.dart';
 
-// ForgotPasswordScreen: Handles user password reset request
+// Screen for password recovery via email
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -15,15 +15,22 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _formKey = GlobalKey<FormBuilderState>(); // Key to manage form state
+  // Form key for validation and state management
+  final _formKey = GlobalKey<FormBuilderState>();
+  
+  // ViewModel for password reset logic
   final _viewModel = ForgotPasswordViewModel();
 
   @override
   Widget build(BuildContext context) {
+    // Get current theme settings
     final theme = Theme.of(context);
+    
+    // Check if using dark theme
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
 
+    // Connect UI to view model for state management
     return ChangeNotifierProvider.value(
       value: _viewModel,
       child: Consumer<ForgotPasswordViewModel>(
@@ -44,8 +51,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     SizedBox(height: 40),
-                    // You can add your logo here
                     SizedBox(height: 40),
+                    
+                    // Main heading
                     Text(
                       'Reset Your Password',
                       style: theme.textTheme.headlineMedium?.copyWith(
@@ -53,6 +61,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                     ),
                     SizedBox(height: 16),
+                    
+                    // Instructions for password reset
                     Text(
                       'Enter your email address below and we\'ll send you instructions to reset your password.',
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -61,20 +71,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: 40),
+                    
+                    // Form for email input
                     FormBuilder(
                       key: _formKey,
                       child: Column(
                         children: [
-                          // Email Field
+                          // Email input field with validation
                           FormBuilderTextField(
                             name: 'email',
                             style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                             decoration: InputDecoration(
                               labelText: 'Email address',
-                              labelStyle: TextStyle(color: theme.inputDecorationTheme.labelStyle?.color ?? theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
+                              labelStyle: TextStyle(color: theme.inputDecorationTheme.labelStyle?.color ?? 
+                                                           theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
                               prefixIcon: Icon(Icons.email_outlined, color: theme.iconTheme.color?.withOpacity(0.7)),
                               filled: true,
-                              fillColor: isDarkTheme ? Color(0xFF1A1A1A) : theme.inputDecorationTheme.fillColor ?? Colors.grey.shade100,
+                              fillColor: isDarkTheme ? Color(0xFF1A1A1A) : 
+                                         theme.inputDecorationTheme.fillColor ?? Colors.grey.shade100,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
@@ -95,7 +109,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                           SizedBox(height: 32),
                           
-                          // Send Reset Email Button
+                          // Reset password button
                           SizedBox(
                             width: double.infinity,
                             height: 50,
@@ -109,7 +123,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       final success = await viewModel.sendPasswordResetEmail(email);
                                       
                                       if (success && mounted) {
-                                        // Show a more detailed message using our styled alerts
+                                        // Show success dialog
                                         StyledAlerts.showDialog(
                                           context: context,
                                           title: 'Reset Email Sent',
@@ -139,8 +153,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                           ],
                                         );
                                       } else if (mounted) {
-                                        // Show a user-friendly error message
-                                        final errorMsg = _getReadableErrorMessage(viewModel.errorMessage ?? 'Failed to send reset email');
+                                        // Show error message
+                                        final errorMsg = _getReadableErrorMessage(
+                                          viewModel.errorMessage ?? 'Failed to send reset email'
+                                        );
                                         StyledAlerts.showSnackBar(
                                           context,
                                           errorMsg,
@@ -165,7 +181,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                           SizedBox(height: 24),
                           
-                          // Error message display
+                          // Display error messages
                           if (viewModel.errorMessage != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 16.0),
@@ -176,7 +192,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                             ),
                           
-                          // Back to Login Link
+                          // Back to login button
                           TextButton(
                             onPressed: () {
                               Navigator.pop(context);
@@ -199,7 +215,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  // Helper method to convert Firebase errors to user-friendly messages
+  // Convert Firebase errors to user-friendly messages
   String _getReadableErrorMessage(String error) {
     if (error.contains('user-not-found')) {
       return 'No account found with this email address';

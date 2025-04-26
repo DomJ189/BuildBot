@@ -7,7 +7,7 @@ import '../viewmodels/sign_up_viewmodel.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/styled_alert.dart';
 
-// Handles user registration functionality
+// User registration screen
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -16,19 +16,19 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  final _formKey = GlobalKey<FormBuilderState>(); // Key to manage form state
+  final _formKey = GlobalKey<FormBuilderState>(); // Form validation key
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreedToTerms = false;
   
-  // Add focus nodes to detect when fields are focused
+  // Focus nodes for password field
   final FocusNode _passwordFocusNode = FocusNode();
   bool _showPasswordRequirements = false;
 
   @override
   void initState() {
     super.initState();
-    // Listen for focus changes on password field
+    // Listen for password field focus changes
     _passwordFocusNode.addListener(() {
       setState(() {
         _showPasswordRequirements = _passwordFocusNode.hasFocus;
@@ -65,7 +65,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(height: 20),
-                  // You can add your logo here
+                  // Logo placeholder
                   SizedBox(height: 30),
                   FormBuilder(
                     key: _formKey,
@@ -79,7 +79,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: 24),
                         
-                        // First Name Field
+                        // First name input field
                         _buildTextField(
                           context: context,
                           name: 'firstName',
@@ -92,7 +92,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: 16),
                         
-                        // Last Name Field
+                        // Last name input field
                         _buildTextField(
                           context: context,
                           name: 'lastName',
@@ -105,7 +105,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: 16),
                         
-                        // Email Field
+                        // Email input field
                         _buildTextField(
                           context: context,
                           name: 'email',
@@ -118,7 +118,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: 16),
                         
-                        // Password Field
+                        // Password input field
                         _buildTextField(
                           context: context,
                           name: 'password',
@@ -147,7 +147,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ]),
                         ),
                         
-                        // Show password requirements only when password field is focused
+                        // Password requirements helper text
                         if (_showPasswordRequirements)
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0, left: 12.0),
@@ -171,7 +171,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         SizedBox(height: 16),
                         
-                        // Confirm Password Field
+                        // Confirm password field
                         _buildTextField(
                           context: context,
                           name: 'confirmPassword',
@@ -190,9 +190,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             },
                           ),
                           validator: (val) {
-                            // Get the password value
+                            // Verify passwords match
                             final password = _formKey.currentState?.fields['password']?.value;
-                            // Compare with confirm password value
                             if (val != password) {
                               return 'Passwords must match';
                             }
@@ -201,7 +200,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: 24),
                         
-                        // Terms and Conditions Checkbox
+                        // Terms and conditions checkbox
                         Row(
                           children: [
                             SizedBox(
@@ -249,7 +248,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: 32),
                         
-                        // Sign Up Button
+                        // Sign up button
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -286,7 +285,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       );
                                       Navigator.pushReplacementNamed(context, '/login');
                                     } else if (mounted) {
-                                      // Show a user-friendly error message instead of the raw Firebase error
+                                      // Convert error to user-friendly message
                                       final errorMsg = _getReadableErrorMessage(viewModel.errorMessage ?? 'Registration failed');
                                       StyledAlerts.showSnackBar(
                                         context,
@@ -312,7 +311,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: 24),
                         
-                        // Contact and Login Links
+                        // Additional navigation links
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -340,7 +339,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Helper method to build styled text fields
+  // Helper method to build standardized text fields
   Widget _buildTextField({
     required BuildContext context,
     required String name,
@@ -384,12 +383,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+  // Display terms and privacy policy dialog
   void _showTermsAndPrivacyDialog(BuildContext context, {required int initialTab}) {
-    // Use a direct context reference instead of relying on Provider
+    // Get theme for consistent styling
     final theme = Theme.of(context);
     final isDarkTheme = theme.brightness == Brightness.dark;
 
-    // Use a direct dialog call that doesn't depend on providers
+    // Show tabbed dialog with terms and privacy
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -437,7 +437,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 fontWeight: FontWeight.bold
                               ),
                             ),
-                            SizedBox(width: 48), // Balance the close button
+                            SizedBox(width: 48), // Balance layout
                           ],
                         ),
                         TabBar(
@@ -456,7 +456,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   Expanded(
                     child: TabBarView(
                       children: [
-                        // Terms of Use Content
+                        // Terms of use content
                         SingleChildScrollView(
                           padding: EdgeInsets.all(16),
                           child: Text(
@@ -464,7 +464,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                           ),
                         ),
-                        // Privacy Policy Content
+                        // Privacy policy content
                         SingleChildScrollView(
                           padding: EdgeInsets.all(16),
                           child: Text(
@@ -484,8 +484,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+  // Generate terms of use text
   String _getTermsOfUseText() {
-    // Replace with the actual terms of use from your About Us section
     return """
 Terms of Use for BuildBot
 
@@ -523,8 +523,8 @@ For questions about these Terms, please contact us through the app.
 """;
   }
 
+  // Generate privacy policy text
   String _getPrivacyPolicyText() {
-    // Replace with the actual privacy policy from your About Us section
     return """
 Privacy Policy for BuildBot
 
@@ -556,7 +556,7 @@ If you have any questions about this Privacy Policy, please contact us through t
 """;
   }
 
-  // Helper method to convert Firebase errors to user-friendly messages
+  // Convert Firebase errors to user-friendly messages
   String _getReadableErrorMessage(String error) {
     if (error.contains('email-already-in-use')) {
       return 'This email is already in use. Please use a different email or try to log in.';

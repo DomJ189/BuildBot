@@ -15,22 +15,22 @@ import 'viewmodels/account_details_viewmodel.dart';
 import 'services/data_retention_service.dart'; // Import DataRetentionService
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Entry point of the application
+// Application entry point with async initialization
 void main() async {
+  // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env"); // Load environment variables
+  // Load environment variables from .env file
+  await dotenv.load(fileName: ".env");
   
-  // Initialize Firebase in a safe way
+  // Initialize Firebase with error handling for duplicate initialization
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
     if (e.toString().contains('duplicate-app')) {
-      // Firebase already initialized, continue
       print('Firebase already initialized');
     } else {
-      // Rethrow if it's a different error
       rethrow;
     }
   }
@@ -40,7 +40,7 @@ void main() async {
   final redditClientSecret = dotenv.env['REDDIT_CLIENT_SECRET'] ?? '';
   final perplexityApiKey = dotenv.env['PERPLEXITY_API_KEY'] ?? '';
   
-  // Initialize services
+  // Initialize application services
   final chatService = ChatService();
   final botService = BotService(
     perplexityApiKey,
@@ -49,33 +49,34 @@ void main() async {
   );
   final dataRetentionService = DataRetentionService(); // Create DataRetentionService
   
+  // Load user preferences for typing speed
   await chatService.loadTypingSpeedPreference();
   
-  // Initialize auto-deletion
+  // Initialize auto-deletion monitoring
   chatService.initializeAutoDeletion();
   
-  // Also apply data retention policy once at startup
+  // Apply data retention policy on startup
   dataRetentionService.applyDataRetentionPolicy();
   
-  // Listen for auth state changes
+  // Monitor user authentication state
   FirebaseAuth.instance.authStateChanges().listen((User? user) async {
     if (user != null) {
-      // User is signed in
+      // Create view model for authenticated user
       final viewModel = AccountDetailsViewModel();
       await viewModel.checkAndMigrateUserData();
       
-      // Set default auto-deletion to "Never delete" for all users
+      // Set default auto-deletion period
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auto_deletion_period', 'Never delete');
       print('Set auto-deletion period to "Never delete"');
       
-      // Initialize chat history for the logged-in user
+      // Initialize chat history for current user
       await chatService.initializeChatHistory();
       
-      // Apply data retention policy when user logs in
+      // Apply data retention policy
       dataRetentionService.applyDataRetentionPolicy();
       
-      // Explicitly run auto-deletion for any chats older than the setting
+      // Run auto-deletion check for old chats
       chatService.runAutoDeletionCheck();
       
       print('User logged in: ${user.email}');
@@ -83,6 +84,7 @@ void main() async {
     }
   });
   
+  // Run the application with providers for dependency injection
   runApp(
     MultiProvider(
       providers: [
@@ -113,7 +115,7 @@ void main() async {
   );
 }
 
-// Create a new MainWrapper widget
+// Wrapper widget that contains main app screens and navigation
 class MainWrapper extends StatefulWidget {
   final int currentIndex;
 
@@ -126,10 +128,11 @@ class MainWrapper extends StatefulWidget {
 class _MainWrapperState extends State<MainWrapper> {
   int _currentIndex = 0;
 
+  // List of main app screens
   final List<Widget> _screens = [
     ChatInterface(),
     ChatHistoryScreen(),
-    SettingsScreen() // Replace Placeholder with SettingsScreen
+    SettingsScreen()
   ];
 
   @override
@@ -141,7 +144,9 @@ class _MainWrapperState extends State<MainWrapper> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Display current screen based on navigation index
       body: _screens[_currentIndex],
+      // Bottom navigation bar for app-wide navigation
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         items: [
@@ -159,7 +164,7 @@ class _MainWrapperState extends State<MainWrapper> {
   }
 }
 
-// Add this function to determine the index based on route name
+// Helper to determine tab index from route name
 int getIndex(String? routeName) {
   switch (routeName) {
     case '/chat':

@@ -5,7 +5,9 @@ import '../providers/theme_provider.dart';
 import 'forgot_password_screen.dart';
 import '../widgets/styled_alert.dart';
 
+// Screen for changing user email address
 class ChangeEmailScreen extends StatelessWidget {
+  // View model for account operations
   final AccountDetailsViewModel viewModel;
   
   const ChangeEmailScreen({
@@ -15,36 +17,45 @@ class ChangeEmailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get theme provider for styling
     final themeProvider = Provider.of<ThemeProvider>(context);
+    
+    // Check if using dark theme
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     
     return Scaffold(
+      // Set background based on theme
       backgroundColor: isDarkTheme ? Colors.black : Colors.white,
       appBar: AppBar(
+        // Style app bar based on theme
         backgroundColor: isDarkTheme ? Colors.black : Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
+            // Set icon color based on theme
             color: isDarkTheme ? Colors.white : Colors.black,
             size: 30,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context),  // Standard back navigation
         ),
         title: Text(
           'Change Email',
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
+            // Set text color based on theme
             color: isDarkTheme ? Colors.white : Colors.black,
           ),
         ),
       ),
+      // Form widget for email change
       body: _ChangeEmailForm(viewModel: viewModel),
     );
   }
 }
 
+// Form for email change process
 class _ChangeEmailForm extends StatefulWidget {
   final AccountDetailsViewModel viewModel;
   
@@ -57,14 +68,20 @@ class _ChangeEmailForm extends StatefulWidget {
 }
 
 class _ChangeEmailFormState extends State<_ChangeEmailForm> {
+  // Form validation key
   final _formKey = GlobalKey<FormState>();
+  
+  // Text controllers for input fields
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  
+  // UI state variables
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
+    // Clean up controllers
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -72,6 +89,7 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
 
   @override
   Widget build(BuildContext context) {
+    // Get theme data for styling
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
 
@@ -83,6 +101,7 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Instructions text
               Text(
                 'Enter your new email address and your current password:',
                 style: TextStyle(
@@ -92,6 +111,8 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
                 ),
               ),
               SizedBox(height: 24),
+              
+              // New email input field
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -104,6 +125,7 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
                   ),
                 ),
                 validator: (value) {
+                  // Validate email format
                   if (value == null || value.isEmpty) {
                     return 'Please enter a new email';
                   }
@@ -114,6 +136,8 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
                 },
               ),
               SizedBox(height: 16),
+              
+              // Current password input field
               TextFormField(
                 controller: _passwordController,
                 obscureText: !_isPasswordVisible,
@@ -127,27 +151,33 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
                   ),
                   suffixIcon: IconButton(
                     icon: Icon(
+                      // Toggle visibility icon
                       _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
                       color: isDarkTheme ? Colors.grey[400] : Colors.grey[600],
                     ),
                     onPressed: () {
                       setState(() {
+                        // Toggle password visibility
                         _isPasswordVisible = !_isPasswordVisible;
                       });
                     },
                   ),
                 ),
                 validator: (value) {
+                  // Validate password field
                   if (value == null || value.isEmpty) {
                     return 'Please enter your password';
                   }
                   return null;
                 },
               ),
+              
+              // Forgot password link
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
+                    // Navigate to password recovery
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
@@ -162,10 +192,13 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
                 ),
               ),
               SizedBox(height: 16),
+              
+              // Submit button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
+                    // Style button based on theme
                     backgroundColor: isDarkTheme ? Colors.white : Colors.blue,
                     foregroundColor: isDarkTheme ? Color(0xFF333333) : Colors.white,
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -175,40 +208,39 @@ class _ChangeEmailFormState extends State<_ChangeEmailForm> {
                   ),
                   onPressed: _isLoading ? null : () async {
                     if (_formKey.currentState?.validate() ?? false) {
-                      setState(() {
-                        _isLoading = true;
-                      });
+                      setState(() => _isLoading = true);
                       
                       try {
+                        // Process email update
                         await widget.viewModel.updateEmail(
                           _emailController.text,
                           _passwordController.text,
                         );
+                        // Return to previous screen
                         Navigator.pop(context, true);
+                        // Show success message
                         StyledAlerts.showSnackBar(
                           context,
-                          'Email updated successfully',
+                          'Verification email sent to ${_emailController.text}. Please check your inbox and click the link to complete the email change.',
                           type: AlertType.success,
                         );
                       } catch (e) {
+                        // Show error message
                         StyledAlerts.showSnackBar(
                           context,
                           e.toString(),
                           type: AlertType.error,
                         );
                       } finally {
-                        if (mounted) {
-                          setState(() {
-                            _isLoading = false;
-                          });
-                        }
+                        // Reset loading state
+                        if (mounted) setState(() => _isLoading = false);
                       }
                     }
                   },
                   child: _isLoading 
                       ? SizedBox(
-                          width: 20, 
-                          height: 20, 
+                          width: 20,
+                          height: 20,
                           child: CircularProgressIndicator(
                             color: isDarkTheme ? Color(0xFF333333) : Colors.white,
                             strokeWidth: 2

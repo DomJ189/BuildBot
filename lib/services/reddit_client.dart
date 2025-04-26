@@ -2,24 +2,27 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:math' as Math;
 
+// Client for accessing Reddit API to search and retrieve posts
 class RedditClient {
   final String clientId;
   final String clientSecret;
   String? _accessToken;
   DateTime? _tokenExpiry;
 
+  // Initialize with API credentials
   RedditClient({
     required this.clientId,
     required this.clientSecret,
   });
 
+  // Get or refresh OAuth access token
   Future<String> _getAccessToken() async {
-    // If we have a valid token, return it
+    // Return existing token if still valid
     if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
       return _accessToken!;
     }
 
-    // Otherwise, get a new token
+    // Request new token
     final response = await http.post(
       Uri.parse('https://www.reddit.com/api/v1/access_token'),
       headers: {
@@ -41,6 +44,7 @@ class RedditClient {
     }
   }
 
+  // Search Reddit for relevant posts
   Future<List<RedditPost>> search({
     required String subreddit,
     required String query,
@@ -53,10 +57,10 @@ class RedditClient {
       
       print('Searching Reddit subreddit: $subreddit, query: "$query"');
       
-      // Add "selftext:query" to search both title and post content 
-      // This improves results by finding posts where the detail matches
+      // Enhance query to search both title and content
       final enhancedQuery = '$query selftext:$query';
       
+      // Build search request URL
       final uri = Uri.parse('https://oauth.reddit.com/r/$subreddit/search')
           .replace(queryParameters: {
         'q': enhancedQuery,
@@ -69,7 +73,7 @@ class RedditClient {
       
       print('Reddit API request URL: $uri');
       
-      // Add timeout to prevent hanging on slow API responses
+      // Send request with timeout
       final response = await http.get(
         uri,
         headers: {
@@ -87,20 +91,19 @@ class RedditClient {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        // Process Reddit API response data
+        // Parse response data
         if (data['data'] != null && data['data']['children'] != null) {
           final children = data['data']['children'] as List;
           
           if (children.isEmpty) {
-            // No results found in the subreddit for this query
             return [];
           }
           
-          // Transform API response into RedditPost objects
+          // Create RedditPost objects from API response
           final posts = children
               .map((post) {
                 try {
-                  // Skip posts with very short titles or no content
+                  // Skip low-quality posts
                   if (post['data'] != null) {
                     final title = post['data']['title'] as String? ?? '';
                     final selftext = post['data']['selftext'] as String? ?? '';
@@ -114,7 +117,6 @@ class RedditClient {
                   }
                   return null;
                 } catch (e) {
-                  // Handle errors when parsing a specific post
                   return null;
                 }
               })
@@ -123,27 +125,25 @@ class RedditClient {
           
           return posts;
         } else {
-          // Invalid API response structure received
           return [];
         }
       } else {
-        // API returned error status code
         return [];
       }
     } catch (e) {
-      // Exception occurred during API request
       return [];
     }
   }
 }
 
+// Model representing a Reddit post from the API
 class RedditPost {
-  final String title;
-  final String selftext;
-  final String url;
-  final int score;
-  final String subreddit;
-  final int createdUtc;
+  final String title;         // Post title
+  final String selftext;      // Post body content
+  final String url;           // Post URL
+  final int score;            // Post score (upvotes minus downvotes)
+  final String subreddit;     // Subreddit name
+  final int createdUtc;       // Creation timestamp
 
   RedditPost({
     required this.title,
@@ -154,9 +154,10 @@ class RedditPost {
     required this.createdUtc,
   });
 
+  // Create RedditPost from API JSON data
   factory RedditPost.fromJson(Map<String, dynamic> json) {
     try {
-      // Handle score which can be int, double, or null
+      // Handle score conversion
       int score = 0;
       if (json['score'] != null) {
         if (json['score'] is int) {
@@ -166,7 +167,7 @@ class RedditPost {
         }
       }
       
-      // Handle createdUtc which can be int, double, or null
+      // Handle creation timestamp conversion
       int createdUtc = 0;
       if (json['created_utc'] != null) {
         if (json['created_utc'] is int) {
@@ -185,7 +186,7 @@ class RedditPost {
         createdUtc: createdUtc,
       );
     } catch (e) {
-      // Return empty post if error occurs during parsing
+      // Return empty post on error
       return RedditPost(
         title: 'Error loading post',
         selftext: '',

@@ -1,11 +1,12 @@
+// Simplified model for displaying Reddit post information in the app
 class RedditPostPreview {
-  final String title;
-  final String subreddit;
-  final String url;
-  final int score;
-  final int commentCount;
-  final String? thumbnailUrl;
-  final double relevanceScore;
+  final String title;             // Post title
+  final String subreddit;         // Source subreddit name
+  final String url;               // Link to the original post
+  final int score;                // Upvote count/karma score
+  final int commentCount;         // Number of comments
+  final String? thumbnailUrl;     // Optional preview image
+  final double relevanceScore;    // Calculated relevance to user query
 
   RedditPostPreview({
     required this.title,
@@ -17,9 +18,10 @@ class RedditPostPreview {
     this.relevanceScore = 0.0,
   });
 
+  // Creates a preview from a full Reddit post object
   factory RedditPostPreview.fromRedditPost(dynamic post) {
     try {
-      // Convert score to int if needed
+      // Handle score value type conversion
       int score = 0;
       if (post.score is int) {
         score = post.score;
@@ -34,11 +36,12 @@ class RedditPostPreview {
         subreddit: post.subreddit,
         url: post.url,
         score: score,
-        commentCount: 0, // Default value as this might not be available
-        thumbnailUrl: null, // Default value as this might not be available
+        commentCount: 0,      // Default as not available in all API responses
+        thumbnailUrl: null,   // Default as not available in all API responses
       );
     } catch (e) {
       print('Error creating RedditPostPreview from RedditPost: $e');
+      // Return fallback object on error
       return RedditPostPreview(
         title: 'Error loading post',
         subreddit: '',
@@ -50,6 +53,7 @@ class RedditPostPreview {
     }
   }
 
+  // Creates a new instance with updated relevance score
   RedditPostPreview copyWithRelevance(double newRelevanceScore) {
     return RedditPostPreview(
       title: title,

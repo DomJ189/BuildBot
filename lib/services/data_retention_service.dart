@@ -2,44 +2,45 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Manages automated chat history cleanup based on user preferences
 class DataRetentionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
-  // Call this method periodically (e.g., when app starts or on a schedule)
+  // Applies the user's retention policy to delete old chat data
   Future<void> applyDataRetentionPolicy() async {
+    // Skip if user not logged in
     final user = _auth.currentUser;
     if (user == null) {
-      // No need to log this every time
       return;
     }
     
+    // Get user preferences
     final prefs = await SharedPreferences.getInstance();
     final saveChatHistory = prefs.getBool('save_chat_history') ?? true;
     
-    // Force "Never delete" as default regardless of what's in preferences
+    // Use "Never delete" as the default retention setting
     String deletionPeriod = prefs.getString('auto_deletion_period') ?? 'Never delete';
     
-    // Set to "Never delete" if for some reason it's set to an invalid value
+    // Validate the deletion period is a recognized value
     if (![
       'Never delete', '24 hours', '15 days', '30 days', '60 days', '90 days'
     ].contains(deletionPeriod)) {
       deletionPeriod = 'Never delete';
       await prefs.setString('auto_deletion_period', deletionPeriod);
-      // Keep this as it's important for configuration issues
       print('[DataRetentionService] Corrected invalid auto-deletion period to "Never delete"');
     }
     
-    // If chat saving is disabled or set to never delete, exit early
+    // Exit early if chat saving is disabled or no deletion is needed
     if (!saveChatHistory || deletionPeriod == 'Never delete') {
       return;
     }
     
-    // Calculate the cutoff date based on the deletion period
+    // Calculate the cutoff date based on user's retention period setting
     final now = DateTime.now();
     DateTime cutoffDate;
     
-    // Determine the cutoff date based on retention period
+    // Set appropriate cutoff date based on user preference
     if (deletionPeriod == '24 hours') {
       cutoffDate = now.subtract(Duration(hours: 24));
     } else if (deletionPeriod == '15 days') {
@@ -51,18 +52,18 @@ class DataRetentionService {
     } else if (deletionPeriod == '90 days') {
       cutoffDate = now.subtract(Duration(days: 90));
     } else {
-      // Default to 30 days if setting is unrecognized
+      // Use 30 days as a fallback
       cutoffDate = now.subtract(Duration(days: 30));
     }
     
-    // Get all chats and filter manually (more reliable than query)
+    // Fetch all the user's chats
     final allChats = await _firestore
         .collection('users')
         .doc(user.email)
         .collection('chats')
         .get();
     
-    // Find documents to delete by manually checking their dates
+    // Identify chats older than the cutoff date
     List<DocumentSnapshot> docsToDelete = [];
     for (var doc in allChats.docs) {
       try {
@@ -77,17 +78,16 @@ class DataRetentionService {
           }
         }
       } catch (e) {
-        // Log errors but be less verbose
         print('[DataRetentionService] Error processing document: $e');
       }
     }
     
-    // If no chats to delete, exit
+    // Exit if no chats need deletion
     if (docsToDelete.isEmpty) {
       return;
     }
     
-    // Delete old chats in a batch
+    // Delete old chats using a batch operation for efficiency
     final batch = _firestore.batch();
     for (var doc in docsToDelete) {
       batch.delete(doc.reference);
@@ -95,7 +95,6 @@ class DataRetentionService {
     
     await batch.commit();
     
-    // Keep this log as it's useful to know what was deleted
     print('[DataRetentionService] Successfully deleted ${docsToDelete.length} old chats');
   }
 } 

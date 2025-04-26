@@ -3,10 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Manages user account details and authentication operations
 class AccountDetailsViewModel extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
+  bool isLoading = false; // Tracks operation progress
+  String? errorMessage;   // Stores error messages
+  
+  // Get the current Firebase user
   User? get currentUser => _auth.currentUser;
   
   String get displayName => currentUser?.displayName ?? 'User';
@@ -14,157 +19,249 @@ class AccountDetailsViewModel extends ChangeNotifier {
   DateTime get creationDate => currentUser?.metadata.creationTime ?? DateTime.now();
   String get initial => displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
   
-  // Update user profile
-  Future<void> updateDisplayName(String newName) async {
+  // Update user display name
+  Future<bool> updateDisplayName(String newName) async {
     try {
-      if (currentUser != null) {
-        await currentUser!.updateDisplayName(newName);
-        notifyListeners();
-      }
-    } catch (e) {
-      String errorMsg = e.toString();
+      isLoading = true;
+      notifyListeners();
       
-      if (errorMsg.contains('network-request-failed')) {
-        throw 'Network error. Please check your internet connection and try again.';
-      } else {
-        throw 'Failed to update display name. Please try again later.';
-      }
+      // Update display name in Firebase Auth
+      await currentUser?.updateDisplayName(newName);
+      
+      isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      isLoading = false;
+      errorMessage = e.toString();
+      notifyListeners();
+      return false;
     }
   }
   
-  // Update email
+  // Update user email with validation
   Future<void> updateEmail(String newEmail, String password) async {
     try {
-      if (currentUser != null) {
-        // Re-authenticate user first
+      isLoading = true;
+      notifyListeners();
+      
+      // Re-authenticate user before changing email
+      await reauthenticateUser(password);
+      
+      // Store old email for data migration
+      final oldEmail = currentUser?.email;
+      
+      // Send verification email before updating email in Firebase Auth
+      await currentUser?.verifyBeforeUpdateEmail(newEmail);
+      
+      // Mark pending email change in Firestore to handle migration on next login
+      if (oldEmail != null) {
+        await _firestore.collection('users').doc(oldEmail).set({
+          'pendingEmail': newEmail,
+          'requestedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+      
+      isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      isLoading = false;
+      errorMessage = e.toString();
+      notifyListeners();
+      throw errorMessage!;
+    }
+  }
+  
+  // Update user password with validation
+  Future<void> updatePassword(String currentPassword, String newPassword) async {
+    try {
+      isLoading = true;
+      notifyListeners();
+      
+      // Re-authenticate before password change
+      await reauthenticateUser(currentPassword);
+      
+      // Update password in Firebase Auth
+      await currentUser?.updatePassword(newPassword);
+      
+      isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      isLoading = false;
+      errorMessage = e.toString();
+      notifyListeners();
+      throw errorMessage!;
+    }
+  }
+  
+  // Migrate user data between emails
+  Future<void> migrateUserData(String oldEmail, String newEmail) async {
+    try {
+      // Get all chat documents for old email
+      final chatDocs = await _firestore.collection('users').doc(oldEmail).collection('chats').get();
+      
+      // Create batch for efficient writing
+      final batch = _firestore.batch();
+      
+      // Copy each chat to the new user account
+      for (var doc in chatDocs.docs) {
+        final newDocRef = _firestore.collection('users').doc(newEmail).collection('chats').doc(doc.id);
+        batch.set(newDocRef, doc.data());
+      }
+      
+      // Execute the batch write
+      await batch.commit();
+      
+      // Delete old data
+      final batchDelete = _firestore.batch();
+      for (var doc in chatDocs.docs) {
+        batchDelete.delete(doc.reference);
+      }
+      
+      // Delete the old user document
+      batchDelete.delete(_firestore.collection('users').doc(oldEmail));
+      
+      // Execute deletion
+      await batchDelete.commit();
+      
+      print('User data migrated from $oldEmail to $newEmail and old data deleted');
+    } catch (e) {
+      print('Error migrating user data: $e');
+    }
+  }
+  
+  // Check for pending email changes and migrate data
+  Future<void> checkAndMigrateUserData() async {
+    try {
+      final user = currentUser;
+      if (user == null || user.email == null) return;
+      
+      final userEmail = user.email!;
+      
+      // Find documents that have a pendingEmail matching current email
+      final usersCollection = await _firestore.collection('users').get();
+      
+      DocumentSnapshot? mostRecentDoc;
+      Timestamp? mostRecentTimestamp;
+      
+      for (var doc in usersCollection.docs) {
+        // Skip current email document
+        if (doc.id == userEmail) continue;
+        
+        // Check for pending email change
+        final data = doc.data();
+        if (data.containsKey('pendingEmail') && data['pendingEmail'] == userEmail) {
+          if (data.containsKey('requestedAt')) {
+            final timestamp = data['requestedAt'];
+            if (mostRecentTimestamp == null || timestamp.compareTo(mostRecentTimestamp) > 0) {
+              mostRecentTimestamp = timestamp;
+              mostRecentDoc = doc;
+            }
+          } else {
+            mostRecentDoc ??= doc;
+          }
+        }
+      }
+      
+      // Migrate data if needed
+      if (mostRecentDoc != null) {
+        final oldEmail = mostRecentDoc.id;
+        await migrateUserData(oldEmail, userEmail);
+        
+        // Mark migration complete
+        await _firestore.collection('users').doc(userEmail).set({
+          'migratedFrom': oldEmail,
+          'migratedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      print('Error checking for email change: $e');
+    }
+  }
+  
+  // Re-authenticate user for security-sensitive operations
+  Future<void> reauthenticateUser(String password) async {
+    try {
+      if (currentUser != null && currentUser!.email != null) {
+        // Create credential with current email and provided password
         AuthCredential credential = EmailAuthProvider.credential(
           email: currentUser!.email!,
           password: password,
         );
         
+        // Re-authenticate with Firebase
         await currentUser!.reauthenticateWithCredential(credential);
-        
-        // Use verifyBeforeUpdateEmail to send verification to the new email
-        await currentUser!.verifyBeforeUpdateEmail(newEmail);
-        
-        // Store the pending email change in Firestore for reference
-        final userEmail = currentUser!.email;
-        if (userEmail != null) {
-          await _firestore
-              .collection('users')
-              .doc(userEmail)
-              .set({
-                'pendingEmail': newEmail,
-                'requestedAt': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
-        }
-        
-        notifyListeners();
-        return;
+      } else {
+        throw 'No user is currently signed in.';
       }
     } catch (e) {
       String errorMsg = e.toString();
       
+      // Convert technical errors to user-friendly messages
       if (errorMsg.contains('invalid-credential') || errorMsg.contains('invalid-email-credential')) {
         throw 'Your password is incorrect. Please check and try again.';
-      } else if (errorMsg.contains('requires-recent-login')) {
-        throw 'Please log out and log in again before changing your email.';
-      } else if (errorMsg.contains('email-already-in-use')) {
-        throw 'This email is already in use by another account.';
-      } else if (errorMsg.contains('invalid-email')) {
-        throw 'Please enter a valid email address.';
       } else if (errorMsg.contains('wrong-password')) {
-        throw 'The password you entered is incorrect.';
+        throw 'Incorrect password. Please check and try again.';
       } else if (errorMsg.contains('network-request-failed')) {
         throw 'Network error. Please check your internet connection and try again.';
+      } else if (errorMsg.contains('too-many-requests')) {
+        throw 'Too many failed attempts. Please try again later.';
       } else {
-        throw 'Failed to update email. Please try again later.';
+        throw 'Authentication failed. Please try again later.';
       }
     }
   }
   
-  // Update password
-  Future<void> updatePassword(String currentPassword, String newPassword) async {
-    try {
-      if (currentUser != null) {
-        // Re-authenticate user before changing password
-        AuthCredential credential = EmailAuthProvider.credential(
-          email: currentUser!.email!,
-          password: currentPassword,
-        );
-        
-        await currentUser!.reauthenticateWithCredential(credential);
-        await currentUser!.updatePassword(newPassword);
-      }
-    } catch (e) {
-      String errorMsg = e.toString();
-      
-      if (errorMsg.contains('invalid-credential') || errorMsg.contains('invalid-email-credential')) {
-        throw 'Your current password is incorrect. Please check and try again.';
-      } else if (errorMsg.contains('requires-recent-login')) {
-        throw 'Please log out and log in again before changing your password.';
-      } else if (errorMsg.contains('weak-password')) {
-        throw 'The new password is too weak. It should be at least 6 characters.';
-      } else if (errorMsg.contains('wrong-password')) {
-        throw 'Current password is incorrect.';
-      } else if (errorMsg.contains('network-request-failed')) {
-        throw 'Network error. Please check your internet connection and try again.';
-      } else {
-        throw 'Failed to update password. Please try again later.';
-      }
-    }
-  }
-  
-  // Delete account
+  // Delete user account and associated data
   Future<void> deleteAccount() async {
     try {
-      final user = currentUser;
-      if (user == null) return;
-      
-      final userEmail = user.email;
-      if (userEmail == null) {
-        throw 'No email associated with this account';
-      }
-      
-      // 1. Delete all user's chats from Firestore
-      final chatCollection = _firestore
-          .collection('users')
-          .doc(userEmail)
-          .collection('chats');
-          
-      final chatDocs = await chatCollection.get();
-      
-      // Create a batch operation for efficient deletion
-      final batch = _firestore.batch();
-      
-      for (var doc in chatDocs.docs) {
-        batch.delete(doc.reference);
-      }
-      
-      // 2. Delete the user document itself
-      batch.delete(_firestore.collection('users').doc(userEmail));
-      
-      // 3. Execute the batch deletion
-      await batch.commit();
-      
-      // 4. Delete user's shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Clear all preferences for this user
-      
-      // 5. Delete the Firebase Authentication account
-      await user.delete();
-    } catch (e) {
-      String errorMsg = e.toString();
-      
-      if (errorMsg.contains('requires-recent-login')) {
-        throw 'For security reasons, please log out and log in again before deleting your account.';
-      } else if (errorMsg.contains('invalid-credential') || errorMsg.contains('invalid-email-credential')) {
-        throw 'Authentication failed. Please check your password and try again.';
-      } else if (errorMsg.contains('network-request-failed')) {
-        throw 'Network error. Please check your internet connection and try again.';
+      if (currentUser != null && currentUser!.email != null) {
+        final userEmail = currentUser!.email!;
+        
+        //Get all chat documents from subcollection
+        final chatDocs = await _firestore
+            .collection('users')
+            .doc(userEmail)
+            .collection('chats')
+            .get();
+        
+        // Create batch for efficient deletion
+        WriteBatch batch = _firestore.batch();
+        
+        // Add chat documents to deletion batch
+        for (var doc in chatDocs.docs) {
+          batch.delete(doc.reference);
+        }
+        
+        //Execute batch deletion of chats
+        await batch.commit();
+        
+        // Delete main user document
+        await _firestore.collection('users').doc(userEmail).delete();
+        
+        // Delete any pending email change references
+        final usersCollection = await _firestore.collection('users').get();
+        batch = _firestore.batch();
+        
+        for (var doc in usersCollection.docs) {
+          final data = doc.data();
+          if (data.containsKey('pendingEmail') && data['pendingEmail'] == userEmail) {
+            batch.delete(doc.reference);
+          }
+        }
+        
+        await batch.commit();
+        
+        // Delete Firebase Auth account
+        await currentUser!.delete();
+        
+        print('Successfully deleted user account and all associated data');
       } else {
-        throw 'Failed to delete account. Please try again later.';
+        throw 'No user is currently signed in.';
       }
+    } catch (e) {
+      print('Error during account deletion: $e');
+      throw e.toString();
     }
   }
   
@@ -183,157 +280,9 @@ class AccountDetailsViewModel extends ChangeNotifier {
         // Just log the pending email for now
         final pendingEmail = userDoc.data()!['pendingEmail'];
         print('Pending email change found: $pendingEmail');
-        
-        // In a real app, you would verify that the user has clicked the verification link
-        // For this demo, we'll just show a message
       }
     } catch (e) {
       print('Error checking pending email changes: $e');
-    }
-  }
-  
-  // Migrate user data after email change
-  Future<void> migrateUserData(String oldEmail, String newEmail) async {
-    try {
-      // 1. Get all collections and documents from the old email
-      final oldUserDoc = await _firestore.collection('users').doc(oldEmail).get();
-      
-      // 2. If the old user document exists, copy its data to the new email
-      if (oldUserDoc.exists) {
-        final userData = oldUserDoc.data();
-        if (userData != null) {
-          // Remove the pendingEmail field if it exists
-          userData.remove('pendingEmail');
-          userData.remove('requestedAt');
-          
-          // Create the new user document with the same data
-          await _firestore.collection('users').doc(newEmail).set(userData);
-        }
-      }
-      
-      // 3. Copy all chats from old email to new email
-      final oldChatsCollection = _firestore
-          .collection('users')
-          .doc(oldEmail)
-          .collection('chats');
-      
-      final newChatsCollection = _firestore
-          .collection('users')
-          .doc(newEmail)
-          .collection('chats');
-      
-      final chatDocs = await oldChatsCollection.get();
-      
-      // Create a batch for efficient writes
-      final batch = _firestore.batch();
-      
-      // Copy each chat document
-      for (var doc in chatDocs.docs) {
-        final newDocRef = newChatsCollection.doc(doc.id);
-        batch.set(newDocRef, doc.data());
-      }
-      
-      // Execute the batch
-      await batch.commit();
-      
-      // 4. Delete the old user data after successful migration
-      // First delete all chat documents
-      final batchDelete = _firestore.batch();
-      for (var doc in chatDocs.docs) {
-        batchDelete.delete(doc.reference);
-      }
-      
-      // Then delete the user document itself
-      batchDelete.delete(_firestore.collection('users').doc(oldEmail));
-      
-      // Execute the deletion batch
-      await batchDelete.commit();
-      
-      print('User data migrated from $oldEmail to $newEmail and old data deleted');
-    } catch (e) {
-      print('Error migrating user data: $e');
-    }
-  }
-  
-  // Check if user email has changed and migrate data if needed
-  Future<void> checkAndMigrateUserData() async {
-    try {
-      final user = currentUser;
-      if (user == null || user.email == null) return;
-      
-      final userEmail = user.email!;
-      
-      // Check all documents in the users collection
-      final usersCollection = await _firestore.collection('users').get();
-      
-      // Find the most recent document with a pendingEmail matching the current email
-      DocumentSnapshot? mostRecentDoc;
-      Timestamp? mostRecentTimestamp;
-      
-      for (var doc in usersCollection.docs) {
-        // Skip the current email document
-        if (doc.id == userEmail) continue;
-        
-        // Check if this document has a pendingEmail that matches the current email
-        final data = doc.data();
-        if (data.containsKey('pendingEmail') && data['pendingEmail'] == userEmail) {
-          // Check if this is the most recent change
-          if (data.containsKey('requestedAt')) {
-            final timestamp = data['requestedAt'];
-            if (mostRecentTimestamp == null || timestamp.compareTo(mostRecentTimestamp) > 0) {
-              mostRecentTimestamp = timestamp;
-              mostRecentDoc = doc;
-            }
-          } else {
-            // If no timestamp, just use the first one found
-            mostRecentDoc ??= doc;
-          }
-        }
-      }
-      
-      // If we found a document, migrate from the most recent one
-      if (mostRecentDoc != null) {
-        final oldEmail = mostRecentDoc.id;
-        await migrateUserData(oldEmail, userEmail);
-        
-        // Update a flag in the new document to indicate migration is complete
-        await _firestore.collection('users').doc(userEmail).set({
-          'migratedFrom': oldEmail,
-          'migratedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      }
-    } catch (e) {
-      print('Error checking for email change: $e');
-    }
-  }
-  
-  // Re-authenticate user with password
-  Future<void> reauthenticateUser(String password) async {
-    try {
-      if (currentUser != null && currentUser!.email != null) {
-        AuthCredential credential = EmailAuthProvider.credential(
-          email: currentUser!.email!,
-          password: password,
-        );
-        
-        await currentUser!.reauthenticateWithCredential(credential);
-      } else {
-        throw 'No user is currently signed in.';
-      }
-    } catch (e) {
-      String errorMsg = e.toString();
-      
-      if (errorMsg.contains('invalid-credential') || errorMsg.contains('invalid-email-credential')) {
-        throw 'Your password is incorrect. Please check and try again.';
-      } else if (errorMsg.contains('wrong-password')) {
-        throw 'Incorrect password. Please check and try again.';
-      } else if (errorMsg.contains('network-request-failed')) {
-        throw 'Network error. Please check your internet connection and try again.';
-      } else if (errorMsg.contains('too-many-requests')) {
-        throw 'Too many failed attempts. Please try again later.';
-      } else {
-        throw 'Authentication failed. Please try again later.';
-      }
     }
   }
 } 

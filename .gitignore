@@ -53,3 +53,6 @@ ios/Runner/GoogleService-Info.plist
 
 # Ignore apk folder
 /apk/
+
+# Ignore Firebase options file with API keys
+lib/firebase_options.dart

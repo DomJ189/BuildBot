@@ -2,26 +2,30 @@ import 'package:flutter/material.dart';
 import '../models/chat.dart';
 import '../services/chat_service.dart';
 
+// Manages state and logic for the chat history screen
 class ChatHistoryViewModel extends ChangeNotifier {
   final ChatService chatService;
-  List<Chat> chats = [];
-  bool isLoading = true;
-  String? errorMessage;
+  List<Chat> chats = [];       // All user's chats
+  bool isLoading = true;       // Loading state flag
+  String? errorMessage;        // Error display message
   
-  // Search functionality
-  String searchQuery = '';
-  List<Chat> filteredChats = [];
+  // Search functionality vars
+  String searchQuery = '';     
+  List<Chat> filteredChats = []; 
   
-  // Selection mode
+  // Selection mode variables
   bool isSelectionMode = false;
   Set<String> selectedChats = {};
   
+  // Store deleted chat for undo
   Chat? _lastDeletedChat;
   
+  // Initialize with chat service
   ChatHistoryViewModel({required this.chatService}) {
     loadChats();
   }
   
+  // Load all user chats
   Future<void> loadChats() async {
     try {
       isLoading = true;
@@ -41,6 +45,7 @@ class ChatHistoryViewModel extends ChangeNotifier {
     }
   }
   
+  // Update search query and filter results
   void setSearchQuery(String query) {
     searchQuery = query;
     if (query.isEmpty) {
@@ -53,6 +58,7 @@ class ChatHistoryViewModel extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Delete chat by ID
   void deleteChat(String chatId) async {
     final chatIndex = chats.indexWhere((chat) => chat.id == chatId);
     if (chatIndex != -1) {
@@ -61,11 +67,11 @@ class ChatHistoryViewModel extends ChangeNotifier {
       filteredChats = List.from(chats);
       notifyListeners();
       
-      // Delete from database
       await chatService.deleteChat(chatId);
     }
   }
   
+  // Delete all user chats
   Future<void> clearAllChats() async {
     try {
       await chatService.clearAllChats();
@@ -78,23 +84,26 @@ class ChatHistoryViewModel extends ChangeNotifier {
     }
   }
   
+  // Set active chat
   void selectChat(Chat chat) {
     chatService.setCurrentChat(chat);
   }
   
-  // Selection mode methods
+  // Start chat selection mode
   void startSelectionMode() {
     isSelectionMode = true;
     selectedChats.clear();
     notifyListeners();
   }
   
+  // Exit selection mode
   void cancelSelectionMode() {
     isSelectionMode = false;
     selectedChats.clear();
     notifyListeners();
   }
   
+  // Toggle chat selected state
   void toggleChatSelection(String chatId) {
     if (selectedChats.contains(chatId)) {
       selectedChats.remove(chatId);
@@ -104,9 +113,11 @@ class ChatHistoryViewModel extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Check if all visible chats are selected
   bool get areAllChatsSelected => 
       selectedChats.length == filteredChats.length && filteredChats.isNotEmpty;
   
+  // Toggle selection of all visible chats
   void toggleSelectAll() {
     if (areAllChatsSelected) {
       selectedChats.clear();
@@ -116,6 +127,7 @@ class ChatHistoryViewModel extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Delete all selected chats
   Future<void> deleteSelectedChats() async {
     try {
       for (final chatId in selectedChats) {
@@ -135,7 +147,7 @@ class ChatHistoryViewModel extends ChangeNotifier {
     }
   }
   
-  // Pin functionality
+  // Toggle chat pinned status
   Future<void> togglePinChat(Chat chat) async {
     try {
       final updatedChat = chat.copyWith(isPinned: !chat.isPinned);
@@ -158,6 +170,7 @@ class ChatHistoryViewModel extends ChangeNotifier {
     }
   }
   
+  // Pin all selected chats
   Future<void> pinSelectedChats() async {
     try {
       for (final chatId in selectedChats) {
@@ -182,6 +195,7 @@ class ChatHistoryViewModel extends ChangeNotifier {
     }
   }
   
+  // Restore last deleted chat
   void undoDelete() {
     if (_lastDeletedChat != null) {
       final index = chats.indexWhere((chat) => chat.createdAt.isAfter(_lastDeletedChat!.createdAt));

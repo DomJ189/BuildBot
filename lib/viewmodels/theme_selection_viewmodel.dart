@@ -1,13 +1,12 @@
-import 'package:flutter/material.dart';
-import '../theme.dart';
+import 'package:flutter/material.dart'; // Import Flutter's material design package
+import '../theme.dart'; // Import app theme definitions
 
 /// Manages the state for the theme selection UI.
-/// This ViewModel temporarily holds the selected theme before it's committed to the ThemeProvider.
 class ThemeSelectionViewModel extends ChangeNotifier {
-  late ThemeData _selectedTheme;
+  late ThemeData _selectedTheme; // Stores the currently selected theme
   
   /// The currently selected theme in the theme picker UI
-  ThemeData get selectedTheme => _selectedTheme;
+  ThemeData get selectedTheme => _selectedTheme; 
   
   /// Initialize with the current application theme
   ThemeSelectionViewModel(ThemeData currentTheme) {
@@ -23,16 +22,15 @@ class ThemeSelectionViewModel extends ChangeNotifier {
   /// Checks if a specific theme is currently selected
   bool isThemeSelected(ThemeData theme) {
     if (theme == AppTheme.defaultTheme && _selectedTheme == AppTheme.defaultTheme) {
-      return true;
+      return true; 
     } else if (theme == AppTheme.darkTheme && _selectedTheme == AppTheme.darkTheme) {
       return true;
     }
-    return false;
+    return false; // Return false if the theme is not selected
   }
   
-  /// Applies the selected theme - the actual saving is now handled by ThemeProvider
+  /// Applies the selected theme 
   Future<void> saveSelectedTheme() async {
-    // No longer need to save preferences here since ThemeProvider handles that
     // This method is kept for compatibility with the existing UI code
     return;
   }

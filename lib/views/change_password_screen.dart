@@ -5,6 +5,7 @@ import '../providers/theme_provider.dart';
 import 'forgot_password_screen.dart'; // Import Forgot Password Screen
 import '../widgets/styled_alert.dart';
 
+// Screen for changing user password
 class ChangePasswordScreen extends StatelessWidget {
   final AccountDetailsViewModel viewModel;
   
@@ -45,6 +46,7 @@ class ChangePasswordScreen extends StatelessWidget {
   }
 }
 
+// Form for password change process
 class _ChangePasswordForm extends StatefulWidget {
   final AccountDetailsViewModel viewModel;
   
@@ -96,6 +98,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
                 ),
               ),
               SizedBox(height: 24),
+              // Current password field
               TextFormField(
                 controller: _currentPasswordController,
                 obscureText: !_isCurrentPasswordVisible,
@@ -126,7 +129,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
                   return null;
                 },
               ),
-              // Forgot Password Link
+              // Forgot password link
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -145,6 +148,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
                 ),
               ),
               SizedBox(height: 8),
+              // New password field
               TextFormField(
                 controller: _newPasswordController,
                 obscureText: !_isNewPasswordVisible,
@@ -179,6 +183,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
                 },
               ),
               SizedBox(height: 16),
+              // Confirm new password field
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: !_isConfirmPasswordVisible,
@@ -213,6 +218,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
                 },
               ),
               SizedBox(height: 32),
+              // Update password button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

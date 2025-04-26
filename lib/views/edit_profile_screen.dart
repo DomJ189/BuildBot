@@ -4,7 +4,7 @@ import '../providers/theme_provider.dart';
 import '../viewmodels/account_details_viewmodel.dart';
 import '../widgets/styled_alert.dart';
 
-// Allows users to edit their profile information
+// Screen for editing user profile information
 class EditProfileScreen extends StatefulWidget {
   final String currentName;
   final AccountDetailsViewModel viewModel;
@@ -27,7 +27,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     
-    // Split the current name into first and last name
+    // Initialize controllers with current name parts
     final nameParts = widget.currentName.split(' ');
     final firstName = nameParts.isNotEmpty ? nameParts[0] : '';
     final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
@@ -87,6 +87,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ),
                 SizedBox(height: 8),
+                // First name input field
                 TextField(
                   controller: firstNameController,
                   style: TextStyle(color: isDarkTheme ? Colors.white : Colors.black),
@@ -114,6 +115,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ),
                 SizedBox(height: 8),
+                // Last name input field
                 TextField(
                   controller: lastNameController,
                   style: TextStyle(color: isDarkTheme ? Colors.white : Colors.black),
@@ -132,7 +134,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 SizedBox(height: 40),
                 
-                // Save Changes button
+                // Save changes button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -157,7 +159,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           );
                         }
                       } else {
-                        // Show warning message
+                        // Show warning for empty name
                         StyledAlerts.showSnackBar(
                           context,
                           'Name cannot be empty',
@@ -181,7 +183,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                 ),
-                // Add extra padding at the bottom to ensure button is visible with keyboard
+                // Extra space for keyboard
                 SizedBox(height: 100),
               ],
             ),
@@ -191,7 +193,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  // Helper method to convert Firebase errors to user-friendly messages
+  // Convert Firebase errors to user-friendly messages
   String _getReadableErrorMessage(String error) {
     if (error.contains('network-request-failed')) {
       return 'Network error, please check your internet connection';

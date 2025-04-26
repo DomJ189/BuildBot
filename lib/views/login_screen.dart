@@ -9,7 +9,7 @@ import '../providers/theme_provider.dart'; // Import Theme Provider
 import '../widgets/styled_alert.dart';
 
 
-/// User authentication screen that handles login to the application.Features email/password login with validation and navigation to related screens.
+/// User login screen with email/password authentication
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -18,35 +18,52 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormBuilderState>(); // Key to manage form state
-  bool _obscurePassword = true; // Controls password visibility toggle
+  final _formKey = GlobalKey<FormBuilderState>(); // Form state key
+  bool _obscurePassword = true; // Password visibility toggle
 
   @override
   Widget build(BuildContext context) {
+    // Get current theme and theme provider
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
 
     return ChangeNotifierProvider(
+      // Create LoginViewModel instance
       create: (_) => LoginViewModel(),
       child: Consumer<LoginViewModel>(
         builder: (context, viewModel, child) {
           return Scaffold(
+            // Main scaffold with app background
             backgroundColor: theme.scaffoldBackgroundColor,
             appBar: AppBar(
+              // App bar with title
               backgroundColor: theme.appBarTheme.backgroundColor,
               title: Text('Login', 
                 style: TextStyle(color: theme.appBarTheme.titleTextStyle?.color ?? theme.primaryTextTheme.titleLarge?.color),
               ),
             ),
             body: SingleChildScrollView(
+              // Scrollable content to handle smaller screens
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     SizedBox(height: 40),
-                    // Logo placeholder
+                    // App logo in a circular container
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.cardColor,
+                      ),
+                      padding: EdgeInsets.all(16),
+                      child: Image.asset(
+                        'assets/images/BuildBotLogo.png',
+                        width: 120,
+                        height: 120,
+                      ),
+                    ),
                     SizedBox(height: 40),
                     
                     // Form with email and password fields
@@ -59,6 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             name: 'email',
                             style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                             decoration: InputDecoration(
+                              // Email field styling
                               labelText: 'Email address',
                               labelStyle: TextStyle(color: theme.inputDecorationTheme.labelStyle?.color ?? theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
                               prefixIcon: Icon(Icons.email_outlined, color: theme.iconTheme.color?.withOpacity(0.7)),
@@ -78,22 +96,25 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             validator: FormBuilderValidators.compose([
+                              // Email validation rules
                               FormBuilderValidators.required(),
                               FormBuilderValidators.email(),
                             ]),
                           ),
                           SizedBox(height: 16),
                           
-                          // Password input field with toggle visibility
+                          // Password input field with visibility toggle
                           FormBuilderTextField(
                             name: 'password',
                             obscureText: _obscurePassword,
                             style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                             decoration: InputDecoration(
+                              // Password field styling
                               labelText: 'Password',
                               labelStyle: TextStyle(color: theme.inputDecorationTheme.labelStyle?.color ?? theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
                               prefixIcon: Icon(Icons.lock_outline, color: theme.iconTheme.color?.withOpacity(0.7)),
                               suffixIcon: IconButton(
+                                // Toggle password visibility button
                                 icon: Icon(
                                   _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                                   color: theme.iconTheme.color?.withOpacity(0.7),
@@ -121,10 +142,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             validator: FormBuilderValidators.required(),
                           ),
-                          // Forgot Password Link
+                          // Forgot password link
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
+                              // Navigate to password recovery screen
                               onPressed: () {
                                 Navigator.push(
                                   context,
@@ -139,11 +161,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           SizedBox(height: 24),
                           
-                          // Login button with loading state
+                          // Login button with loading indicator
                           SizedBox(
                             width: double.infinity,
                             height: 50,
                             child: ElevatedButton(
+                              // Handle login process with form validation
                               onPressed: viewModel.isLoading 
                                 ? null 
                                 : () async {
@@ -154,6 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       final success = await viewModel.login(email, password);
                                       
                                       if (success && mounted) {
+                                        // Show success message and navigate to main screen
                                         StyledAlerts.showSnackBar(
                                           context, 
                                           'Logged in successfully!',
@@ -161,6 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         );
                                         Navigator.pushReplacementNamed(context, '/main');
                                       } else if (mounted) {
+                                        // Show user-friendly error message
                                         final errorMsg = _getReadableErrorMessage(viewModel.errorMessage ?? 'Login failed');
                                         StyledAlerts.showSnackBar(
                                           context, 
@@ -171,6 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     }
                                   },
                               style: ElevatedButton.styleFrom(
+                                // Button styling
                                 backgroundColor: theme.primaryColor,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
@@ -186,9 +212,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           SizedBox(height: 24),
                           
-                          // Sign Up Link
+                          // Sign up link for new users
                           TextButton(
                             onPressed: () {
+                              // Navigate to sign up screen
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => SignUpScreen()),
@@ -212,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Helper method to convert Firebase errors to user-friendly messages
+  // Convert Firebase error codes to user-friendly messages
   String _getReadableErrorMessage(String error) {
     if (error.contains('user-not-found')) {
       return 'No account found with this email address';

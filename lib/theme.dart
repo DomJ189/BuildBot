@@ -1,43 +1,26 @@
 import 'package:flutter/material.dart';
 
-/// AppColors defines the application's color palette.
-/// 
-/// This class centralizes all color constants used throughout the app,
-/// ensuring consistent visual identity across the application.
+/// App color constants used throughout the application
 class AppColors {
-  /// Primary brand color - blue (#007BFF)
-  /// Used for primary buttons, app bar, links, and key interactive elements
+  /// Primary blue color for main interactive elements
   static const Color primaryColor = Color(0xFF007BFF);
   
-  /// Secondary accent color - green (#28A745)
-  /// Used for success states, progress indicators, and call-to-action elements
+  /// Secondary green color for success states and indicators
   static const Color secondaryColor = Color(0xFF28A745);
   
-  /// Default light background color - white (#FFFFFF)
-  /// Used as the main background color in light theme
+  /// Default white background for light theme
   static const Color backgroundColor = Color(0xFFFFFFFF);
   
-  /// Primary text color - dark gray (#343A40)
-  /// Used for headings and body text in light theme for good readability
+  /// Primary dark text color for good readability
   static const Color textColor = Color(0xFF343A40);
   
-  /// Light gray background color (#F8F9FA)
-  /// Used for subtle backgrounds, cards, form fields, and dividers in light theme
+  /// Light gray for subtle backgrounds and form fields
   static const Color lightGray = Color(0xFFF8F9FA);
 }
 
-/// AppTheme provides pre-configured theme options for the application.
-/// 
-/// This class contains factory methods that create complete [ThemeData] 
-/// objects with consistent styling across different theme variants.
-/// The app's visual appearance can be changed by selecting one of these themes.
+/// Theme configuration for the application
 class AppTheme {
-  /// Default light theme - The standard theme with blue accent and light background
-  /// 
-  /// Features:
-  /// - Light backgrounds with dark text for optimal readability
-  /// - Blue primary color for brand identity
-  /// - High contrast for accessibility
+  /// Default light theme with blue accents
   static ThemeData get defaultTheme => _buildThemeData(
         primary: AppColors.primaryColor,
         secondary: AppColors.secondaryColor,
@@ -46,12 +29,7 @@ class AppTheme {
         isDark: false,
       );
 
-  /// Dark theme - Inverted color scheme for low-light environments
-  /// 
-  /// Features:
-  /// - Dark backgrounds with light text to reduce eye strain in low light
-  /// - White accent color for consistency with dark mode standards
-  /// - Reduced brightness for better viewing in dark environments
+  /// Dark theme for low-light environments
   static ThemeData get darkTheme => _buildThemeData(
         primary: Colors.white,
         secondary: Color(0xFF424242),
@@ -61,48 +39,29 @@ class AppTheme {
         onPrimary: Colors.black,
       );
 
-  /// Light theme - Alias for defaultTheme
-  /// 
-  /// This getter exists to provide semantic clarity when selecting themes
-  /// by explicitly requesting a 'light' theme rather than the 'default'
+  /// Alias for default light theme
   static ThemeData get lightTheme => defaultTheme;
 
-  /// Private factory method that constructs a complete [ThemeData] object
-  /// with consistent styling based on provided color parameters.
-  /// 
-  /// This method centralizes theme construction logic to ensure
-  /// all themes have consistent structure.
-  /// 
-  /// ## Parameters:
-  /// 
-  /// * [primary] - The main brand color for interactive elements like buttons and selection controls
-  /// * [secondary] - The supporting color for secondary UI elements and accents
-  /// * [background] - The color used for main surfaces like scaffold backgrounds
-  /// * [text] - The default color for text content
-  /// * [isDark] - Whether this theme uses dark mode semantics (affects contrast and system UI)
-  /// * [onPrimary] - Optional color for text/icons on primary color surfaces (defaults to white/black based on contrast)
+  /// Builds theme data with consistent styling from colors
   static ThemeData _buildThemeData({
-    required Color primary,
-    required Color secondary,
-    required Color background,
-    required Color text,
-    required bool isDark,
-    Color? onPrimary,
+    required Color primary, //The main brand color for interactive elements like buttons and selection controls
+    required Color secondary, //Secondary color for secondary interactive elements like selection controls
+    required Color background, //Default background color for the app
+    required Color text, //Default text color for the app
+    required bool isDark, //Boolean flag to determine if the theme is dark or light
+    Color? onPrimary, //Optional color for the primary text on the primary background
   }) {
     return ThemeData(
-      // --- CORE THEME ATTRIBUTES ---
-      
-      // Primary branding color used throughout the app
-      primaryColor: primary,
+      // Core theme settings
+      primaryColor: primary, // Set the primary color
       
       // Controls overall color contrast and system UI elements (status bar, etc.)
-      brightness: isDark ? Brightness.dark : Brightness.light,
+      brightness: isDark ? Brightness.dark : Brightness.light, // Set brightness based on theme type
       
-      // --- COLOR SCHEME DEFINITION ---
-      // Comprehensive color scheme that defines all color relationships
+      // Complete color scheme
       colorScheme: ColorScheme(
         // Base brightness setting (dark/light)
-        brightness: isDark ? Brightness.dark : Brightness.light,
+        brightness: isDark ? Brightness.dark : Brightness.light, // Set color scheme brightness
         
         // Primary and secondary brand colors
         primary: primary,
@@ -125,9 +84,7 @@ class AppTheme {
         onError: Colors.white,
       ),
       
-      // --- COMPONENT-SPECIFIC THEMING ---
-      
-      // Background color for Scaffold widgets
+      // Component-specific styling
       scaffoldBackgroundColor: background,
       
       // App bar appearance
@@ -138,11 +95,11 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           fontSize: 20,
         ),
-        iconTheme: IconThemeData(color: text),
+        iconTheme: IconThemeData(color: text), // Set app bar icon color
         elevation: 0, // Flat design without shadows
       ),
       
-      // Default text styling
+      // Text and icon styling
       textTheme: TextTheme(
         bodyLarge: TextStyle(color: text),
         titleLarge: TextStyle(color: text),

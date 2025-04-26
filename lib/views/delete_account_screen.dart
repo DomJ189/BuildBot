@@ -5,6 +5,7 @@ import '../providers/theme_provider.dart';
 import 'forgot_password_screen.dart'; // Import Forgot Password Screen
 import '../widgets/styled_alert.dart';
 
+// Screen for permanently deleting user accounts with password confirmation
 class DeleteAccountScreen extends StatelessWidget {
   final AccountDetailsViewModel viewModel;
   
@@ -15,6 +16,7 @@ class DeleteAccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Access theme settings
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
     
@@ -40,11 +42,13 @@ class DeleteAccountScreen extends StatelessWidget {
           ),
         ),
       ),
+      // Display delete account form
       body: _DeleteAccountForm(viewModel: viewModel),
     );
   }
 }
 
+// Form that handles account deletion process
 class _DeleteAccountForm extends StatefulWidget {
   final AccountDetailsViewModel viewModel;
   
@@ -57,18 +61,22 @@ class _DeleteAccountForm extends StatefulWidget {
 }
 
 class _DeleteAccountFormState extends State<_DeleteAccountForm> {
+  // Controller for password field
   final _passwordController = TextEditingController();
+  // State variables for UI controls
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
+    // Clean up resources
     _passwordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get theme settings
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
 
@@ -78,6 +86,7 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Warning text about account deletion
             Text(
               'This action will permanently delete your account and all your chat history. To confirm, please enter your password:',
               style: TextStyle(
@@ -86,6 +95,8 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
               ),
             ),
             SizedBox(height: 24),
+            
+            // Password input field
             TextField(
               controller: _passwordController,
               obscureText: !_isPasswordVisible,
@@ -97,6 +108,7 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
                 ),
+                // Password visibility toggle
                 suffixIcon: IconButton(
                   icon: Icon(
                     _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
@@ -110,7 +122,8 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
                 ),
               ),
             ),
-            // Forgot Password Link
+            
+            // Forgot password link
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -127,6 +140,8 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
               ),
             ),
             SizedBox(height: 16),
+            
+            // Delete account button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -139,6 +154,7 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
                   ),
                 ),
                 onPressed: _isLoading ? null : () async {
+                  // Validate password is entered
                   if (_passwordController.text.isEmpty) {
                     StyledAlerts.showSnackBar(
                       context,
@@ -153,7 +169,7 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
                   });
                   
                   try {
-                    // Show confirmation dialog before proceeding
+                    // Show confirmation dialog
                     final confirmed = await StyledAlerts.showConfirmationDialog(
                       context: context,
                       title: 'Confirm Account Deletion',
@@ -169,10 +185,11 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
                       return;
                     }
                     
-                    // Re-authenticate user before deleting
+                    // Authenticate user before deletion
                     await widget.viewModel.reauthenticateUser(_passwordController.text);
                     await widget.viewModel.deleteAccount();
                     
+                    // Return to login page after deletion
                     Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
                     StyledAlerts.showSnackBar(
                       context,
@@ -210,7 +227,7 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
     );
   }
 
-  // Helper method to convert Firebase errors to user-friendly messages
+  // Converts Firebase errors to user-friendly messages
   String _getReadableErrorMessage(String error) {
     if (error.contains('wrong-password')) {
       return 'Incorrect password, please check and try again';
