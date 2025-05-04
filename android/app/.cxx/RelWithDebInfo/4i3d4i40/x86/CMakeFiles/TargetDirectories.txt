@@ -1,0 +1,2 @@
+C:/Users/domin/Build-Bot/android/app/.cxx/RelWithDebInfo/4i3d4i40/x86/CMakeFiles/edit_cache.dir
+C:/Users/domin/Build-Bot/android/app/.cxx/RelWithDebInfo/4i3d4i40/x86/CMakeFiles/rebuild_cache.dir

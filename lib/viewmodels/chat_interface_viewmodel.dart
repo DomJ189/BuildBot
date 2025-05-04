@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/bot_service.dart';
 import '../services/chat_service.dart';
 import '../models/chat.dart';
-import '../models/reddit_post_preview.dart';
+import '../models/reddit_post.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/youtube_service.dart';
 
@@ -18,7 +18,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   bool isBotTyping = false;                       // Controls typing animation display
   bool isScrollToBottomButtonVisible = false;     // Controls scroll button visibility
   List<YouTubeVideo> currentVideos = [];          // YouTube videos for current response
-  List<RedditPostPreview> currentRedditPosts = []; // Reddit posts for current response
+  List<RedditPost> currentRedditPosts = [];        // Reddit posts for current response
   
   // Typing animation properties
   String currentTypingText = '';                  // Partial text shown during typing animation
@@ -69,25 +69,27 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
         }
         
-        // Reconstruct RedditPostPreview objects from stored data
-        List<RedditPostPreview> redditPosts = [];
+        // Reconstruct RedditPost objects from stored data
+        List<RedditPost> redditPosts = [];
         if (message.containsKey('redditPosts') && message['redditPosts'] != null) {
           try {
             List<dynamic> postList = message['redditPosts'] as List<dynamic>;
             redditPosts = postList.map((p) {
               if (p is Map<String, dynamic>) {
-                return RedditPostPreview(
+                return RedditPost(
                   title: p['title'] ?? '',
-                  subreddit: p['subreddit'] ?? '',
+                  selftext: p['selftext'] ?? '',
                   url: p['url'] ?? '',
                   score: p['score'] ?? 0,
+                  subreddit: p['subreddit'] ?? '',
+                  createdUtc: p['createdUtc'] ?? 0,
                   commentCount: p['commentCount'] ?? 0,
                   thumbnailUrl: p['thumbnailUrl'],
                   relevanceScore: p['relevanceScore']?.toDouble() ?? 0.0,
                 );
               }
               return null;
-            }).whereType<RedditPostPreview>().toList();
+            }).whereType<RedditPost>().toList();
           } catch (e) {
             print('Error loading saved Reddit posts: $e');
           }
@@ -203,12 +205,12 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         }
         
         // Process Reddit posts from the response
-        List<RedditPostPreview> redditPosts = [];
+        List<RedditPost> redditPosts = [];
         if (response.containsKey('redditPosts')) {
           try {
             final postsList = response['redditPosts'] as List<dynamic>;
             if (postsList.isNotEmpty) {
-              redditPosts = postsList.whereType<RedditPostPreview>().toList();
+              redditPosts = postsList.whereType<RedditPost>().toList();
             }
           } catch (e) {
             print('Error processing Reddit posts: $e');
@@ -323,7 +325,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       'sender': 'user', 
       'message': message,
       'videos': <YouTubeVideo>[],
-      'redditPosts': <RedditPostPreview>[],
+      'redditPosts': <RedditPost>[],
     });
     notifyListeners();
     
@@ -365,7 +367,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       }
       
       // Process Reddit posts from the response
-      List<RedditPostPreview> redditPosts = [];
+      List<RedditPost> redditPosts = [];
       if (response.containsKey('redditPosts')) {
         try {
           final postsList = response['redditPosts'] as List<dynamic>;
@@ -374,10 +376,10 @@ class ChatInterfaceViewModel extends ChangeNotifier {
               for (var i = 0; i < postsList.length; i++) {
                 try {
                   final post = postsList[i];
-                  if (post is RedditPostPreview) {
+                  if (post is RedditPost) {
                     redditPosts.add(post);
                   } else {
-                    print('Post at index $i is not a RedditPostPreview: ${post.runtimeType}');
+                    print('Post at index $i is not a RedditPost: ${post.runtimeType}');
                   }
                 } catch (postError) {
                   print('Error processing individual Reddit post at index $i: $postError');
@@ -416,7 +418,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         'sender': 'bot', 
         'message': 'Sorry, I encountered an error: $e',
         'videos': <YouTubeVideo>[],
-        'redditPosts': <RedditPostPreview>[],
+        'redditPosts': <RedditPost>[],
       });
       notifyListeners();
       
@@ -448,7 +450,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   }
   
   // Start the typing animation for bot response
-  void startTypingAnimation(String response, List<YouTubeVideo> videos, List<RedditPostPreview> redditPosts) {
+  void startTypingAnimation(String response, List<YouTubeVideo> videos, List<RedditPost> redditPosts) {
     // Initialize animation state
     fullBotResponse = response;
     currentCharIndex = 0;
@@ -515,15 +517,8 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         }).whereType<Map<String, dynamic>>().toList() ?? [],
         // Convert Reddit posts to serializable format
         'redditPosts': (m['redditPosts'] as List<dynamic>?)?.map((post) {
-          if (post is RedditPostPreview) {
-            return {
-              'title': post.title,
-              'subreddit': post.subreddit,
-              'url': post.url,
-              'score': post.score,
-              'commentCount': post.commentCount,
-              'thumbnailUrl': post.thumbnailUrl,
-            };
+          if (post is RedditPost) {
+            return post.toMap();
           }
           return null;
         }).whereType<Map<String, dynamic>>().toList() ?? [],
@@ -639,12 +634,12 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       }
       
       // Process Reddit posts from response
-      List<RedditPostPreview> redditPosts = [];
+      List<RedditPost> redditPosts = [];
       if (response.containsKey('redditPosts')) {
         try {
           final postsList = response['redditPosts'] as List<dynamic>;
           if (postsList.isNotEmpty) {
-            redditPosts = postsList.whereType<RedditPostPreview>().toList();
+            redditPosts = postsList.whereType<RedditPost>().toList();
           }
         } catch (e) {
           print('Error processing Reddit posts: $e');

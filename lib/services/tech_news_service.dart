@@ -4,7 +4,8 @@ import 'package:html/parser.dart' as parser;
 import 'package:xml/xml.dart';
 import 'reddit_client.dart';
 import 'package:intl/intl.dart';
-import '../models/reddit_post_preview.dart';
+import '../models/news_article.dart';
+import '../models/reddit_post.dart';
 
 class TechNewsService {
   static const String _tomshardwareUrl = 'https://www.tomshardware.com/uk';
@@ -39,7 +40,7 @@ class TechNewsService {
     return articles;
   }
 
-  Future<List<RedditPostPreview>> searchRedditForTroubleshooting(String query) async {
+  Future<List<RedditPost>> searchRedditForTroubleshooting(String query) async {
     try {
       // Expanded list of subreddits to search with more technical PC-focused ones first
       final subreddits = [
@@ -48,7 +49,7 @@ class TechNewsService {
         'intel', 'watercooling', 'pchelp', 'computers', 'computertechs',
         'buildmeapc', 'nvidia', 'amdhelp'
       ];
-      final List<RedditPostPreview> results = [];
+      final List<RedditPost> results = [];
       
       // Refine the search query for better results
       String searchQuery = _refineSearchQuery(query);
@@ -69,32 +70,22 @@ class TechNewsService {
           
           if (posts.isNotEmpty) {
             try {
-              final previews = posts.map((post) {
-                // Create basic preview
-                final preview = RedditPostPreview(
-                  title: post.title,
-                  subreddit: post.subreddit,
-                  url: post.url,
-                  score: post.score,
-                  commentCount: 0,
-                  thumbnailUrl: null,
-                );
-                
+              final enhancedPosts = posts.map((post) {
                 // Calculate relevance score
-                final relevanceScore = _calculateRelevanceScore(preview, queryTerms, query);
+                final relevanceScore = _calculateRelevanceScore(post, queryTerms, query);
                 
-                // Return preview with relevance score
-                return preview.copyWithRelevance(relevanceScore);
+                // Return post with relevance score
+                return post.copyWithRelevance(relevanceScore);
               }).toList();
               
-              results.addAll(previews);
+              results.addAll(enhancedPosts);
               
               // If we found some posts already, we don't need to check all subreddits
               if (results.length >= 5 && !_isSpecificSubredditRequest(query)) {
                 break;
               }
             } catch (e) {
-              print('Error creating RedditPostPreview: $e');
+              print('Error processing Reddit posts: $e');
             }
           }
         } catch (e) {
@@ -138,7 +129,7 @@ class TechNewsService {
   }
   
   // Calculate relevance score based on query terms
-  double _calculateRelevanceScore(RedditPostPreview post, List<String> queryTerms, String originalQuery) {
+  double _calculateRelevanceScore(RedditPost post, List<String> queryTerms, String originalQuery) {
     if (queryTerms.isEmpty) return 0.5; // Default mid-level score if no query terms
     
     final lowerTitle = post.title.toLowerCase();
@@ -187,7 +178,7 @@ class TechNewsService {
   }
   
   // Filter out irrelevant or inappropriate content from search results
-  List<RedditPostPreview> _filterResults(List<RedditPostPreview> results, String originalQuery) {
+  List<RedditPost> _filterResults(List<RedditPost> results, String originalQuery) {
     // Extract key terms from the original query to check for relevance
     final queryTerms = _extractKeyTerms(originalQuery.toLowerCase());
     
@@ -583,36 +574,4 @@ class TechNewsService {
     }
     return [];
   }
-}
-
-class NewsArticle {
-  final String title;
-  final String url;
-  final String source;
-  final DateTime publishDate;
-
-  NewsArticle({
-    required this.title,
-    required this.url,
-    required this.source,
-    required this.publishDate,
-  });
-}
-
-class RedditPost {
-  final String title;
-  final String content;
-  final String url;
-  final int score;
-  final String subreddit;
-  final DateTime createdUtc;
-
-  RedditPost({
-    required this.title,
-    required this.content,
-    required this.url,
-    required this.score,
-    required this.subreddit,
-    required this.createdUtc,
-  });
 } 

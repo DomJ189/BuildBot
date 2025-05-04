@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:math' as Math;
+import '../models/reddit_post.dart';
 
 // Client for accessing Reddit API to search and retrieve posts
 class RedditClient {
@@ -132,69 +133,6 @@ class RedditClient {
       }
     } catch (e) {
       return [];
-    }
-  }
-}
-
-// Model representing a Reddit post from the API
-class RedditPost {
-  final String title;         // Post title
-  final String selftext;      // Post body content
-  final String url;           // Post URL
-  final int score;            // Post score (upvotes minus downvotes)
-  final String subreddit;     // Subreddit name
-  final int createdUtc;       // Creation timestamp
-
-  RedditPost({
-    required this.title,
-    required this.selftext,
-    required this.url,
-    required this.score,
-    required this.subreddit,
-    required this.createdUtc,
-  });
-
-  // Create RedditPost from API JSON data
-  factory RedditPost.fromJson(Map<String, dynamic> json) {
-    try {
-      // Handle score conversion
-      int score = 0;
-      if (json['score'] != null) {
-        if (json['score'] is int) {
-          score = json['score'];
-        } else if (json['score'] is double) {
-          score = (json['score'] as double).toInt();
-        }
-      }
-      
-      // Handle creation timestamp conversion
-      int createdUtc = 0;
-      if (json['created_utc'] != null) {
-        if (json['created_utc'] is int) {
-          createdUtc = json['created_utc'];
-        } else if (json['created_utc'] is double) {
-          createdUtc = (json['created_utc'] as double).toInt();
-        }
-      }
-      
-      return RedditPost(
-        title: json['title'] ?? '',
-        selftext: json['selftext'] ?? '',
-        url: json['url'] ?? '',
-        score: score,
-        subreddit: json['subreddit'] ?? '',
-        createdUtc: createdUtc,
-      );
-    } catch (e) {
-      // Return empty post on error
-      return RedditPost(
-        title: 'Error loading post',
-        selftext: '',
-        url: '',
-        score: 0,
-        subreddit: '',
-        createdUtc: 0,
-      );
     }
   }
 } 

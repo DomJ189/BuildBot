@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../models/reddit_post_preview.dart';
+import '../models/reddit_post.dart';
 
 class RedditLinkCard extends StatelessWidget {
-  final RedditPostPreview post;
+  final RedditPost post;
   
   const RedditLinkCard({
     Key? key, 

@@ -7,7 +7,7 @@ import 'dart:async';
 import '../viewmodels/chat_interface_viewmodel.dart';
 import '../widgets/youtube_video_player.dart';
 import '../widgets/reddit_link_card.dart';
-import '../models/reddit_post_preview.dart';
+import '../models/reddit_post.dart';
 import '../services/youtube_service.dart';
 
 /// Main chat interface screen where users interact with the AI assistant.Displays messages, handles user input, and renders media content.
@@ -449,7 +449,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                         ...redditPostsList!.map((post) => 
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
-                            child: RedditLinkCard(post: post as RedditPostPreview),
+                            child: RedditLinkCard(post: post as RedditPost),
                           )
                         ).toList(),
                       ],

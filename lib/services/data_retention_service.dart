@@ -22,7 +22,7 @@ class DataRetentionService {
     // Use "Never delete" as the default retention setting
     String deletionPeriod = prefs.getString('auto_deletion_period') ?? 'Never delete';
     
-    // Validate the deletion period is a recognized value
+    // Validate the deletion period is a recognised value
     if (![
       'Never delete', '24 hours', '15 days', '30 days', '60 days', '90 days'
     ].contains(deletionPeriod)) {
