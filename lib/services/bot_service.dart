@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'youtube_service.dart';
 import 'tech_news_service.dart';
+import 'reddit_service.dart';
 import 'gpu_recommendation_service.dart';
 import 'dart:math' as Math;
 import '../models/reddit_post.dart';
@@ -13,7 +14,8 @@ class BotService {
   String apiKey; 
   final List<Map<String, dynamic>> _conversationHistory = []; // Stores conversation history
   final YouTubeService _youtubeService = YouTubeService();
-  late final TechNewsService _techNewsService;
+  final TechNewsService _techNewsService = TechNewsService();
+  late final RedditService _redditService;
   final GPURecommendationService _gpuService = GPURecommendationService();
 
   // Constructor to initialize the BotService with the provided API key
@@ -25,9 +27,9 @@ class BotService {
         apiKey = envKey;
       }
     }
-    _techNewsService = TechNewsService(
-      redditClientId: redditClientId,
-      redditClientSecret: redditClientSecret,
+    _redditService = RedditService(
+      clientId: redditClientId,
+      clientSecret: redditClientSecret,
     );
   }
 
@@ -80,7 +82,7 @@ class BotService {
           prompt.toLowerCase().contains('reddit') ||
           prompt.toLowerCase().contains('post') ||
           prompt.toLowerCase().contains('r/')) {
-        final posts = await _techNewsService.searchRedditForTroubleshooting(prompt);
+        final posts = await _redditService.searchRedditForTroubleshooting(prompt);
         if (posts.isNotEmpty) {
           additionalContext += '\n\nFound relevant discussions on Reddit that might help with your issue.';
           redditPosts = posts.take(3).toList();
@@ -301,7 +303,7 @@ class BotService {
           message.toLowerCase().contains('help') ||
           message.toLowerCase().contains('trouble')) {
         try {
-          final posts = await _techNewsService.searchRedditForTroubleshooting(message);
+          final posts = await _redditService.searchRedditForTroubleshooting(message);
           if (posts.isNotEmpty) {
             redditPosts = posts.toList(); // Use .toList() to make a copy
           }
