@@ -2,30 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
-
-class YouTubeVideo {
-  final String id;
-  final String title;
-  final String thumbnailUrl;
-  final String channelTitle;
-  final DateTime publishedAt;
-
-  YouTubeVideo({
-    required this.id,
-    required this.title,
-    required this.thumbnailUrl,
-    required this.channelTitle,
-    required this.publishedAt,
-  });
-
-  String get watchUrl => 'https://www.youtube.com/watch?v=$id';
-  
-  // Add app-specific URLs for different platforms
-  String get appUrl => 'youtube://www.youtube.com/watch?v=$id';
-  
-  // YouTube deep link format for mobile apps
-  String get deepLinkUrl => 'vnd.youtube:$id';
-}
+import '../models/youtube_video.dart';
 
 class YouTubeService {
   final String apiKey;

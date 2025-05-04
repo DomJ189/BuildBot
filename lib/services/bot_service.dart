@@ -5,6 +5,7 @@ import 'tech_news_service.dart';
 import 'gpu_recommendation_service.dart';
 import 'dart:math' as Math;
 import '../models/reddit_post.dart';
+import '../models/youtube_video.dart';
 
 // Handles communication with the Perplexity AI API for generating responses
 class BotService {

@@ -8,7 +8,7 @@ import '../viewmodels/chat_interface_viewmodel.dart';
 import '../widgets/youtube_video_player.dart';
 import '../widgets/reddit_link_card.dart';
 import '../models/reddit_post.dart';
-import '../services/youtube_service.dart';
+import '../models/youtube_video.dart';
 
 /// Main chat interface screen where users interact with the AI assistant.Displays messages, handles user input, and renders media content.
 class ChatInterface extends StatefulWidget {

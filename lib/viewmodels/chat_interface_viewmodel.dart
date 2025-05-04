@@ -5,6 +5,7 @@ import '../services/bot_service.dart';
 import '../services/chat_service.dart';
 import '../models/chat.dart';
 import '../models/reddit_post.dart';
+import '../models/youtube_video.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/youtube_service.dart';
 
@@ -30,7 +31,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   // Edit functionality tracking
   int? editingMessageIndex;                       // Index of message being edited (null if none)
   
-  // Constructor - initializes the ViewModel with dependencies and loads past chat if available
+  // Constructor - initialises the ViewModel with dependencies and loads past chat if available
   ChatInterfaceViewModel({required this.chatService}) : 
       // Initialize BotService with API keys from environment variables
       botService = BotService(
@@ -106,7 +107,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         });
       }
       
-      // Initialize API service with conversation history for context
+      // Initialise API service with conversation history for context
       final botMessages = messages.map((m) => {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',

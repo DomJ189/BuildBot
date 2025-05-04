@@ -124,7 +124,7 @@ class RedditPost {
     );
   }
   
-  // Converts to a map for serialization
+  // Converts to a map for serialisation
   Map<String, dynamic> toMap() {
     return {
       'title': title,
