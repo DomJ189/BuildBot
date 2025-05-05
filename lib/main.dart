@@ -15,21 +15,21 @@ import 'viewmodels/account_details_viewmodel.dart';
 import 'services/data_retention_service.dart'; // Import DataRetentionService
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Application entry point with async initialization
+// Application entry point with async initialisation
 void main() async {
-  // Ensure Flutter bindings are initialized
+  // Ensure Flutter bindings are initialised
   WidgetsFlutterBinding.ensureInitialized();
   // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
   
-  // Initialize Firebase with error handling for duplicate initialization
+  // Initialise Firebase with error handling for duplicate initialisation
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
     if (e.toString().contains('duplicate-app')) {
-      print('Firebase already initialized');
+      print('Firebase already initialised');
     } else {
       rethrow;
     }
@@ -40,7 +40,7 @@ void main() async {
   final redditClientSecret = dotenv.env['REDDIT_CLIENT_SECRET'] ?? '';
   final perplexityApiKey = dotenv.env['PERPLEXITY_API_KEY'] ?? '';
   
-  // Initialize application services
+  // Initialise application services
   final chatService = ChatService();
   final botService = BotService(
     perplexityApiKey,
@@ -52,8 +52,8 @@ void main() async {
   // Load user preferences for typing speed
   await chatService.loadTypingSpeedPreference();
   
-  // Initialize auto-deletion monitoring
-  chatService.initializeAutoDeletion();
+  // Initialise auto-deletion monitoring
+   chatService.initialiseAutoDeletion();
   
   // Apply data retention policy on startup
   dataRetentionService.applyDataRetentionPolicy();
@@ -70,8 +70,8 @@ void main() async {
       await prefs.setString('auto_deletion_period', 'Never delete');
       print('Set auto-deletion period to "Never delete"');
       
-      // Initialize chat history for current user
-      await chatService.initializeChatHistory();
+      // Initialise chat history for current user
+      await chatService.initialiseChatHistory();
       
       // Apply data retention policy
       dataRetentionService.applyDataRetentionPolicy();
@@ -80,7 +80,7 @@ void main() async {
       chatService.runAutoDeletionCheck();
       
       print('User logged in: ${user.email}');
-      print('Chat history initialized and auto-deletion checks running');
+      print('Chat history initialised and auto-deletion checks running');
     }
   });
   

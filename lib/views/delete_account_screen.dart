@@ -169,7 +169,7 @@ class _DeleteAccountFormState extends State<_DeleteAccountForm> {
                   });
                   
                   try {
-                    // Show confirmation dialog
+                    // Show confirmation dialogue
                     final confirmed = await StyledAlerts.showConfirmationDialog(
                       context: context,
                       title: 'Confirm Account Deletion',

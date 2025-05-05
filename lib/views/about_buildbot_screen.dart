@@ -104,7 +104,7 @@ class AboutBuildBotScreen extends StatelessWidget {
             _buildFeatureItem('Component selection advice', themeProvider),
             _buildFeatureItem('Compatibility checking', themeProvider),
             _buildFeatureItem('Troubleshooting assistance', themeProvider),
-            _buildFeatureItem('Performance optimization tips', themeProvider),
+            _buildFeatureItem('Performance optimisation tips', themeProvider),
             _buildFeatureItem('Budget-friendly recommendations', themeProvider),
             SizedBox(height: 24),
             

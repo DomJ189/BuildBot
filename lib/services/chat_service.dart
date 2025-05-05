@@ -188,8 +188,8 @@ class ChatService {
     }
   }
 
-  // Add this method to initialize chat history
-  Future<void> initializeChatHistory() async {
+  // Add this method to initialise chat history
+  Future<void> initialiseChatHistory() async {
     final user = _auth.currentUser;
     if (user == null) return;
 
@@ -214,7 +214,7 @@ class ChatService {
 
       _chatStreamController.add(chats);
     } catch (e) {
-      print('Error initializing chat history: $e');
+      print('Error initialising chat history: $e');
       _chatStreamController.add([]);
     }
   }
@@ -242,7 +242,7 @@ class ChatService {
 
     try {
       // Initialize chat history first
-      await initializeChatHistory();
+      await initialiseChatHistory();
       
       // Then listen for real-time updates
       yield* _firestore
@@ -395,8 +395,8 @@ class ChatService {
   Timer? _autoDeletionTimer;
   final Duration _checkInterval = Duration(hours: 1); // Check once per hour instead of every minute
 
-  // Update this method to initialize auto-deletion
-  void initializeAutoDeletion() {
+  // Update this method to initialise auto-deletion
+  void initialiseAutoDeletion() {
     // Cancel any existing timer
     _autoDeletionTimer?.cancel();
     
@@ -505,7 +505,7 @@ class ChatService {
       print('Successfully auto-deleted ${docsToDelete.length} chats older than $periodSetting');
       
       // Refresh the chat list after deletion
-      initializeChatHistory();
+      initialiseChatHistory();
       
     } catch (e) {
       // Keep error logs

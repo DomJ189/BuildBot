@@ -23,7 +23,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
   final TextEditingController _controller = TextEditingController();     // For new messages
   final TextEditingController _editController = TextEditingController(); // For editing messages
   
-  // Scroll controller to manage chat scrolling behavior
+  // Scroll controller to manage chat scrolling behaviour
   final ScrollController _scrollController = ScrollController();
   
   // Reference to the view model that manages chat state and logic
@@ -486,8 +486,8 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
               // Edit button for user messages
               GestureDetector(
                 onTap: () {
-                  // Show edit dialog when tapped
-                  _showEditDialog(message);
+                  // Show edit dialogue when tapped
+                  _showEditDialogue(message);
                 },
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -565,8 +565,8 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     );
   }
   
-  // Shows a dialog to edit a user message
-  void _showEditDialog(String message) {
+  // Shows a dialogue to edit a user message
+  void _showEditDialogue(String message) {
     // Find the index of the message to edit
     final messageIndex = _viewModel.messages.indexWhere(
       (m) => m['sender'] == 'user' && m['message'] == message
@@ -580,7 +580,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     // Update ViewModel editing state
     _viewModel.startEditingMessage(messageIndex);
     
-    // Show the edit dialog
+    // Show the edit dialogue
     showDialog(
       context: context,
       builder: (context) {

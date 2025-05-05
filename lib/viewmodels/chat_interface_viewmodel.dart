@@ -113,7 +113,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         'content': m['message'] ?? '',
       }).toList();
       
-      botService.initializeConversationHistory(botMessages);
+      botService.initialiseConversationHistory(botMessages);
     }
     
     // Load user preferences for typing speed
@@ -240,7 +240,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           'role': m['sender'] == 'user' ? 'user' : 'assistant',
           'content': m['message'] ?? '',
         }).toList();
-        botService.initializeConversationHistory(updatedBotMessages);
+        botService.initialiseConversationHistory(updatedBotMessages);
         
         // Save changes to storage
         _saveCurrentChat();
@@ -669,7 +669,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',
       }).toList();
-      botService.initializeConversationHistory(updatedBotMessages);
+      botService.initialiseConversationHistory(updatedBotMessages);
       
       // Save changes to storage
       _saveCurrentChat();

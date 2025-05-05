@@ -123,7 +123,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       final success = await viewModel.sendPasswordResetEmail(email);
                                       
                                       if (success && mounted) {
-                                        // Show success dialog
+                                        // Show success dialogue
                                         StyledAlerts.showDialog(
                                           context: context,
                                           title: 'Reset Email Sent',

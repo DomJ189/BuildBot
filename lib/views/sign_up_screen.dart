@@ -383,13 +383,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Display terms and privacy policy dialog
+  // Display terms and privacy policy dialogue
   void _showTermsAndPrivacyDialog(BuildContext context, {required int initialTab}) {
     // Get theme for consistent styling
     final theme = Theme.of(context);
     final isDarkTheme = theme.brightness == Brightness.dark;
 
-    // Show tabbed dialog with terms and privacy
+    // Show tabbed dialogue with terms and privacy
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {

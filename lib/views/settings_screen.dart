@@ -225,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return 'Medium';
   }
   
-  /// Shows dialog to adjust bot typing animation speed
+  /// Shows dialogue to adjust bot typing animation speed
   void _showTypingSpeedDialog(BuildContext context, ChatService chatService, VoidCallback onSettingsChanged) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.currentTheme.brightness == Brightness.dark;

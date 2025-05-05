@@ -55,13 +55,13 @@ class StyledAlerts {
     );
   }
 
-  /// Shows a styled dialog with the provided title and content.
+  /// Shows a styled dialogue with the provided title and content.
   /// 
   /// Parameters:
   /// - context: The BuildContext
-  /// - title: The title of the dialog
-  /// - content: The content of the dialog
-  /// - actions: Optional actions for the dialog (defaults to OK button)
+  /// - title: The title of the dialogue
+  /// - content: The content of the dialogue
+  /// - actions: Optional actions for the dialogue (defaults to OK button)
   static Future<T?> showDialog<T>({
     required BuildContext context,
     required String title,
@@ -127,11 +127,11 @@ class StyledAlerts {
     );
   }
 
-  /// Shows a confirmation dialog with the provided title and message.
+  /// Shows a confirmation dialogue with the provided title and message.
   /// 
   /// Parameters:
   /// - context: The BuildContext
-  /// - title: The title of the dialog
+  /// - title: The title of the dialogue
   /// - message: The message to display
   /// - confirmText: Text for the confirm button (defaults to "Confirm")
   /// - cancelText: Text for the cancel button (defaults to "Cancel")

@@ -18,7 +18,7 @@ class BotService {
   late final RedditService _redditService;
   final GPURecommendationService _gpuService = GPURecommendationService();
 
-  // Constructor to initialize the BotService with the provided API key
+  // Constructor to initialise the BotService with the provided API key
   BotService(this.apiKey, {required String redditClientId, required String redditClientSecret}) {
     // Try to load API key from environment if not provided
     if (apiKey == 'your-api-key') {
@@ -563,7 +563,7 @@ class BotService {
   }
 
   // Update this method in BotService
-  void initializeConversationHistory(List<Map<String, dynamic>> messages) {
+  void initialiseConversationHistory(List<Map<String, dynamic>> messages) {
     _conversationHistory.clear();
     
     // Make sure messages alternate between user and assistant
