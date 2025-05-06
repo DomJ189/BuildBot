@@ -70,6 +70,31 @@ class RedditLinkCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8.0),
+                  
+                  // Add the selftext snippet if available
+                  if (post.selftext.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.grey.shade800 
+                            : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(4.0),
+                      ),
+                      child: Text(
+                        post.selftext.length > 200 
+                            ? '${post.selftext.substring(0, 200)}...'
+                            : post.selftext,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.grey.shade200 
+                              : Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 8.0),
                   Text(
                     "Explore this post and more from the ${post.subreddit} community",
                     style: TextStyle(

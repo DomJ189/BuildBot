@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           FormBuilderTextField(
                             name: 'email',
                             style: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                            decoration: InputDecoration(
+                            decoration: InputDecoration(  //Styling
                               // Email field styling
                               labelText: 'Email address',
                               labelStyle: TextStyle(color: theme.inputDecorationTheme.labelStyle?.color ?? theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),

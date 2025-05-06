@@ -138,6 +138,7 @@ class _MainWrapperState extends State<MainWrapper> {
   @override
   void initState() {
     super.initState();
+    // Initialise navigation index with the value passed from constructor
     _currentIndex = widget.currentIndex;
   }
 
