@@ -1,4 +1,4 @@
-// Class to detect and analyze different types of content-related user requests
+// Class to detect and analyse different types of content-related user requests
 class ContentRequestHandler {
   static final _videoRequestPhrases = [
     'yes', 'sure', 'please', 'show me', 'i would like', 'video', 

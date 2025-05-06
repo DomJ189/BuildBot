@@ -8,7 +8,7 @@ class ThemeSelectionViewModel extends ChangeNotifier {
   /// The currently selected theme in the theme picker UI
   ThemeData get selectedTheme => _selectedTheme; 
   
-  /// Initialize with the current application theme
+  /// Initialise with the current application theme
   ThemeSelectionViewModel(ThemeData currentTheme) {
     _selectedTheme = currentTheme;
   }

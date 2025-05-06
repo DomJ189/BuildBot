@@ -37,7 +37,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
   void initState() {
     super.initState();
     
-    // Initialize animation controller for the typing indicator dots
+    // Initialise animation controller for the typing indicator dots
     _dotAnimationController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
@@ -574,7 +574,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
     
     if (messageIndex < 0) return; // Message not found
     
-    // Initialize edit controller with current message text
+    // Initialise edit controller with current message text
     _editController.text = message;
     
     // Update ViewModel editing state

@@ -31,7 +31,7 @@ class ChatService {
     await prefs.setDouble('typing_speed', _typingSpeed);
   }
   
-  // Method to load preference (call this in your initialization)
+  // Method to load preference (call this in your initialisation)
   Future<void> loadTypingSpeedPreference() async {
     final prefs = await SharedPreferences.getInstance();
     _typingSpeed = prefs.getDouble('typing_speed') ?? 1.5;
@@ -82,8 +82,8 @@ class ChatService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Use sanitized title as document ID if available, otherwise use chat.id
-    final docId = chat.title.isNotEmpty ? _sanitizeDocumentId(chat.title) : chat.id;
+    // Use sanitised title as document ID if available, otherwise use chat.id
+    final docId = chat.title.isNotEmpty ? _sanitiseDocumentId(chat.title) : chat.id;
     
     // Create a data map with the proper timestamp format
     final data = chat.toMap();
@@ -105,21 +105,21 @@ class ChatService {
     _currentChat = chat;
   }
 
-  // Sanitize the title to be used as a document ID
-  String _sanitizeDocumentId(String title) {
+  // Sanitise the title to be used as a document ID
+  String _sanitiseDocumentId(String title) {
     // Remove invalid characters and limit length
-    String sanitized = title
+    String sanitised = title
         .replaceAll(RegExp(r'[^\w\s-]'), '') // Remove special chars except underscore, space, hyphen
         .trim()
         .replaceAll(RegExp(r'\s+'), '_'); // Replace spaces with underscores
     
     // Limit to 100 chars to avoid Firestore limitations
-    if (sanitized.length > 100) {
-      sanitized = sanitized.substring(0, 100);
+    if (sanitised.length > 100) {
+      sanitised = sanitised.substring(0, 100);
     }
     
     // Ensure it's not empty
-    return sanitized.isEmpty ? 'untitled_chat' : sanitized;
+    return sanitised.isEmpty ? 'untitled_chat' : sanitised;
   }
 
   // Deletes a chat from Firestore
@@ -241,7 +241,7 @@ class ChatService {
     }
 
     try {
-      // Initialize chat history first
+      // Initialise chat history first
       await initialiseChatHistory();
       
       // Then listen for real-time updates
@@ -290,8 +290,8 @@ class ChatService {
     if (saveChatHistory) {
       final user = _auth.currentUser;
       if (user != null) {
-        // Use sanitized title as document ID if available, otherwise use chatId
-        final docId = title.isNotEmpty ? _sanitizeDocumentId(title) : chatId;
+        // Use sanitised title as document ID if available, otherwise use chatId
+        final docId = title.isNotEmpty ? _sanitiseDocumentId(title) : chatId;
         
         // Convert chat to map and add server timestamp
         final data = chat.toMap();
@@ -447,7 +447,7 @@ class ChatService {
       } else if (periodSetting == '90 days') {
         cutoffDate = now.subtract(Duration(days: 90));
       } else {
-        // Default to 30 days if setting is unrecognized
+        // Default to 30 days if setting is unrecognised
         cutoffDate = now.subtract(Duration(days: 30));
       }
       

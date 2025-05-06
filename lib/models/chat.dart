@@ -31,7 +31,7 @@ class Chat {
       'title': title,
       // Convert date to string format
       'createdAt': createdAt.toIso8601String(),
-      // Normalize message format
+      // Normalise message format
       'messages': messages.map((m) => {
         'sender': m['sender'] ?? '', // Extracts sender from message map
         'message': m['message'] ?? '', // Extracts message content from message map

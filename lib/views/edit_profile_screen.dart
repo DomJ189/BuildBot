@@ -27,7 +27,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     
-    // Initialize controllers with current name parts
+    // Initialise controllers with current name parts
     final nameParts = widget.currentName.split(' ');
     final firstName = nameParts.isNotEmpty ? nameParts[0] : '';
     final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';

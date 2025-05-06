@@ -33,7 +33,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   
   // Constructor - initialises the ViewModel with dependencies and loads past chat if available
   ChatInterfaceViewModel({required this.chatService}) : 
-      // Initialize BotService with API keys from environment variables
+      // Initialise BotService with API keys from environment variables
       botService = BotService(
         dotenv.env['PERPLEXITY_API_KEY'] ?? 'your-api-key',
         redditClientId: dotenv.env['REDDIT_CLIENT_ID'] ?? '',
@@ -43,6 +43,8 @@ class ChatInterfaceViewModel extends ChangeNotifier {
     if (chatService.currentChat != null) {
       currentChatId = chatService.currentChat!.id;
       currentChatTitle = chatService.currentChat!.title;
+      
+      print('Loading existing chat with ID: $currentChatId and ${chatService.currentChat!.messages.length} messages');
       
       // Convert stored chat messages to in-memory format    
       for (var message in chatService.currentChat!.messages) {
@@ -107,13 +109,21 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         });
       }
       
+      print('Loaded ${messages.length} messages into memory');
+      
       // Initialise API service with conversation history for context
+      // Create properly formatted messages for API context
       final botMessages = messages.map((m) => {
         'role': m['sender'] == 'user' ? 'user' : 'assistant',
         'content': m['message'] ?? '',
       }).toList();
       
+      // Always reinitialise the conversation context when loading a chat
+      // This is critical for maintaining context between sessions
+      botService.clearConversationHistory();
       botService.initialiseConversationHistory(botMessages);
+      
+      print('Conversation context initialised for API with ${botMessages.length} messages');
     }
     
     // Load user preferences for typing speed
@@ -321,7 +331,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   Future<void> sendMessage(String message) async {
     if (message.trim().isEmpty) return;
     
-    // Add user message to the chat
+    // Add user message to the chat UI
     messages.add({
       'sender': 'user', 
       'message': message,
@@ -351,7 +361,9 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         'content': m['message'] ?? '',
       }).toList();
       
-      // Get AI response with enhanced content
+      // Get AI response with enhanced content - pass the full message history
+      // The BotService will handle deduplication and proper initialisation
+      print('Sending message to bot service with ${botMessages.length} messages of context');
       final response = await botService.getResponseWithVideos(message, botMessages);
       
       // Process videos from the response
@@ -452,7 +464,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
   
   // Start the typing animation for bot response
   void startTypingAnimation(String response, List<YouTubeVideo> videos, List<RedditPost> redditPosts) {
-    // Initialize animation state
+    // Initialise animation state
     fullBotResponse = response;
     currentCharIndex = 0;
     currentTypingText = '';

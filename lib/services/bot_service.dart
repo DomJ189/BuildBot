@@ -39,10 +39,10 @@ class BotService {
       clientSecret: redditClientSecret,
     ),
     _gpuService = gpuService ?? GPURecommendationService() {
-    _initializeApiKey();
+    _initialiseApiKey();
   }
 
-  void _initializeApiKey() {
+  void _initialiseApiKey() {
     // Try to load API key from environment if not provided
     if (apiKey == 'your-api-key') {
       final envKey = const String.fromEnvironment('PERPLEXITY_API_KEY');
@@ -62,11 +62,138 @@ class BotService {
   // Clear conversation history (for starting a new chat)
   void clearConversationHistory() {
     _conversation.clear();
+    print('Conversation history cleared');
   }
 
-  // Initialize conversation history from external messages
+  // Initialise conversation history from external messages
   void initialiseConversationHistory(List<Map<String, dynamic>> messages) {
-    _conversation.initializeFrom(messages);
+    if (messages.isEmpty) {
+      print('Warning: Attempted to initialise conversation with empty message list');
+      return;
+    }
+    
+    print('Initialising conversation history with ${messages.length} messages');
+    
+    // Convert messages to the standard format before initialising
+    final formattedMessages = messages.map((message) {
+      // Check if message is already in the right format
+      if (message.containsKey('role') && message.containsKey('content')) {
+        return message;
+      }
+      
+      // Convert from UI message format to API message format
+      return {
+        'role': message['sender'] == 'user' ? 'user' : 'assistant',
+        'content': message['message'] ?? '',
+      };
+    }).toList();
+    
+    // Ensure messages have alternating roles (required by Perplexity API)
+    final sanitisedMessages = _ensureAlternatingRoles(formattedMessages);
+    
+    // Initialise the conversation manager with sanitised messages
+    _conversation.initialiseFrom(sanitisedMessages);
+    
+    // Double-check that conversation has been properly initialised
+    if (_conversation.messages.isEmpty) {
+      print('Error: Conversation manager failed to initialise messages');
+    } else {
+      print('Successfully initialised conversation with ${_conversation.messages.length} messages');
+    }
+  }
+  
+  // Ensure conversation history has properly alternating roles (user->assistant->user->assistant)
+  List<Map<String, dynamic>> _ensureAlternatingRoles(List<Map<String, dynamic>> messages) {
+    if (messages.isEmpty) return [];
+    
+    final result = <Map<String, dynamic>>[];
+    String lastRole = '';
+    
+    for (var message in messages) {
+      final role = message['role'] as String;
+      final content = message['content'] as String;
+      
+      // Skip empty messages
+      if (content.trim().isEmpty) continue;
+      
+      // If this is the first message or the role is different from the last one, add it
+      if (lastRole.isEmpty || role != lastRole) {
+        result.add(message);
+        lastRole = role;
+      } 
+      // If we have consecutive messages with the same role, merge them
+      else if (role == lastRole && result.isNotEmpty) {
+        final lastMessage = result.last;
+        final combinedContent = '${lastMessage['content']}\n\n${message['content']}';
+        result[result.length - 1] = {
+          'role': role,
+          'content': combinedContent
+        };
+        print('Merged consecutive $role messages for API compatibility');
+      }
+    }
+    
+    // API requires alternating user and assistant messages
+    // Check if the sequence follows proper alternation and fix if needed
+    if (result.length >= 2) {
+      List<Map<String, dynamic>> fixedResult = [];
+      String expectedRole = 'user'; // Conversation typically starts with user
+      
+      // Add the first message, ensuring it's from the user
+      if (result[0]['role'] == 'user') {
+        fixedResult.add(result[0]);
+        expectedRole = 'assistant';
+      } else {
+        // If the first message is from the assistant, prepend a placeholder user message
+        print('Adding placeholder user message at the start to maintain alternating roles');
+        fixedResult.add({
+          'role': 'user',
+          'content': 'Hello'
+        });
+        fixedResult.add(result[0]);
+        expectedRole = 'user';
+      }
+      
+      // Process the rest of the messages
+      for (int i = 1; i < result.length; i++) {
+        final role = result[i]['role'] as String;
+        
+        // If the role matches what's expected, add it normally
+        if (role == expectedRole) {
+          fixedResult.add(result[i]);
+          expectedRole = expectedRole == 'user' ? 'assistant' : 'user';
+        } 
+        // If this role is the same as the previous role, skip it (already handled through merging)
+        else if (role == fixedResult.last['role']) {
+          continue;
+        }
+        // If we have multiple assistant messages in a row, insert a placeholder user message
+        else if (role == 'assistant' && expectedRole == 'user') {
+          print('Adding placeholder user message to maintain alternating roles');
+          fixedResult.add({
+            'role': 'user',
+            'content': 'Please continue.'
+          });
+          fixedResult.add(result[i]);
+          expectedRole = 'user';
+        }
+        // If we have multiple user messages in a row, insert a placeholder assistant message
+        else if (role == 'user' && expectedRole == 'assistant') {
+          print('Adding placeholder assistant message to maintain alternating roles');
+          fixedResult.add({
+            'role': 'assistant', 
+            'content': 'I understand. Please tell me more.'
+          });
+          fixedResult.add(result[i]);
+          expectedRole = 'assistant';
+        }
+      }
+      
+      print('Fixed conversation history from ${result.length} to ${fixedResult.length} messages');
+      return fixedResult;
+    }
+    
+    return result;
   }
 
   // Enhanced fetchResponse method to include tech news, Reddit troubleshooting, and GPU recommendations
@@ -134,30 +261,46 @@ class BotService {
     required String systemMessage,
     required List<Map<String, dynamic>> messages,
   }) async {
+      // First ensure message sequence is valid (alternating user/assistant)
+      List<Map<String, dynamic>> validatedMessages = _ensureAlternatingRoles(messages);
+      
+      // Log how many messages we're sending to the API
+      print('Sending ${validatedMessages.length} messages to Perplexity API after validation');
+      
+      // Format the first few messages for debugging
+      if (validatedMessages.isNotEmpty) {
+        print('First message: ${validatedMessages.first['role']} - ${(validatedMessages.first['content'] as String).substring(0, math.min(50, (validatedMessages.first['content'] as String).length))}...');
+        if (validatedMessages.length > 1) {
+          print('Last message: ${validatedMessages.last['role']} - ${(validatedMessages.last['content'] as String).substring(0, math.min(50, (validatedMessages.last['content'] as String).length))}...');
+        }
+      }
+      
       final url = Uri.parse('https://api.perplexity.ai/chat/completions');
-    final body = jsonEncode({
-      'model': 'sonar',
-      'messages': [
-        {'role': 'system', 'content': systemMessage},
-        ...messages,
-      ],
-      'temperature': 0.7,
-      'max_tokens': 1000,
-    });
+      final body = jsonEncode({
+        'model': 'sonar',
+        'messages': [
+          {'role': 'system', 'content': systemMessage},
+          ...validatedMessages,
+        ],
+        'temperature': 0.7,
+        'max_tokens': 1000,
+      });
 
       final response = await http.post(
         url,
         headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
+        'Authorisation': 'Bearer $apiKey',
       },
       body: body,
     );
 
       if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+        final data = jsonDecode(response.body);
+        final content = data['choices'][0]['message']['content'].toString().trim();
+        print('Received response from API (${content.length} chars)');
         return {
-        'content': data['choices'][0]['message']['content'].toString().trim(),
+          'content': content,
         };
       } else {
         print('Error: ${response.statusCode}');
@@ -166,14 +309,82 @@ class BotService {
     }
   }
 
+  // Validate that messages follow the alternating pattern required by the API
+  void _validateMessageSequence(List<Map<String, dynamic>> messages) {
+    if (messages.isEmpty) {
+      print('Warning: Empty message list sent to API');
+      return;
+    }
+    
+    bool isValid = true;
+    String lastRole = '';
+    
+    for (int i = 0; i < messages.length; i++) {
+      final role = messages[i]['role'] as String;
+      
+      if (i > 0) {
+        // After the first message, roles should alternate
+        if (role == lastRole) {
+          print('Error: Message at index $i has the same role ($role) as the previous message');
+          isValid = false;
+          break;
+        }
+      }
+      
+      lastRole = role;
+    }
+    
+    if (!isValid) {
+      print('WARNING: Message sequence does not follow alternating pattern. API may return an error.');
+      // Print message roles for debugging
+      for (int i = 0; i < messages.length; i++) {
+        print('Message $i: ${messages[i]['role']}');
+      }
+    } else {
+      print('Message sequence validation passed: roles are properly alternating');
+    }
+  }
+
   // Modify the getResponseWithVideos method to handle video requests differently
   Future<Map<String, dynamic>> getResponseWithVideos(String message, List<Map<String, dynamic>> messages) async {
     try {
+      // If messages are provided, reinitialise the conversation context
+      if (messages.isNotEmpty) {
+        // Check if the last message in the viewmodel is the same as what we're about to add
+        final lastMessage = messages.last;
+        bool isDuplicateMessage = false;
+        
+        if (lastMessage['role'] == 'user' || lastMessage['sender'] == 'user') {
+          final lastContent = lastMessage['content'] ?? lastMessage['message'] ?? '';
+          // If the last message is from the user and has the same content, flag as duplicate
+          if (lastContent.trim() == message.trim()) {
+            print('Detected duplicate user message. Will not add again to conversation.');
+            isDuplicateMessage = true;
+          }
+        }
+        
+        // Initialise conversation from viewmodel messages
+        print('Refreshing conversation context with ${messages.length} messages from viewmodel');
+        initialiseConversationHistory(messages);
+        
+        // Only add the user message if it's not a duplicate of the last message
+        if (!isDuplicateMessage) {
+          // Add user message to history
+          _conversation.addMessage('user', message);
+          print('Added user message to conversation');
+        }
+      } else {
+        // If no messages provided, just start with this message
+        _conversation.addMessage('user', message);
+        print('Starting new conversation with user message');
+      }
+      
+      // Log the conversation context
+      print('Processing message with ${_conversation.messages.length} messages in context');
+      print('Conversation has ${_conversation.messages.length} messages');
+      
       // Check if this is just a conversational response (like "thank you")
       final isConversational = ConversationalResponseHandler.isConversational(message);
-      
-      // Add user message to history
-      _conversation.addMessage('user', message);
       
       // Check for Reddit-related queries
       List<dynamic> redditPosts = await _fetchRedditPostsIfNeeded(message);
@@ -189,7 +400,7 @@ class BotService {
         if (betterVideos.isEmpty) {
           response = "I'm sorry those videos weren't helpful. Unfortunately, I couldn't find other relevant videos on this topic.";
         } else {
-          response = "I apologize those videos weren't helpful. Here are some more specific videos that should better address your question:";
+          response = "I apologise those videos weren't helpful. Here are some more specific videos that should better address your question:";
         }
         
         // Add bot response to history
@@ -483,21 +694,62 @@ class BotService {
     return '';
   }
 
-  // Try a better video search after negative feedback
-  Future<List<YouTubeVideo>> _tryBetterVideoSearch(String message) async {
-    // Extract the original topic that user is looking for
-    final topic = _extractTopicFromConversation();
-    
-    if (topic.isEmpty) return [];
-    
-    // Create a more specific search query with tutorial keywords
-    final searchQuery = BotModel.refineVideoSearchQuery(topic, ['tutorial', 'guide', 'detailed']);
-    
-    // Try searching for videos with this specific query
+  // Method to try to find better videos when user says current ones aren't helpful
+  Future<List<YouTubeVideo>> _tryBetterVideoSearch(String feedbackMessage) async {
     try {
-      return await _youtubeService.searchVideos(searchQuery);
+      // Extract topic from conversation context
+      String searchTopic = '';
+      
+      // Look at the last few messages to find what we were talking about
+      final recentMessages = _conversation.messages.reversed.take(4).toList().reversed.toList();
+      
+      // First try to find a specific request in the feedback
+      final directRequest = BotModel.extractTopicFromMessage(feedbackMessage);
+      if (directRequest.isNotEmpty) {
+        searchTopic = directRequest;
+        print('Found direct request in feedback: $searchTopic');
+      } 
+      // If no direct request, look at previous messages
+      else if (recentMessages.length >= 2) {
+        // Look for user messages that might contain the original topic
+        for (int i = 0; i < recentMessages.length - 1; i++) {
+          if (recentMessages[i]['role'] == 'user') {
+            final potentialTopic = BotModel.extractTopicFromMessage(recentMessages[i]['content']);
+            if (potentialTopic.isNotEmpty) {
+              searchTopic = potentialTopic;
+              print('Found topic in previous message: $searchTopic');
+              break;
+            }
+          }
+        }
+      }
+      
+      // If we still don't have a topic, use a more specific query with the most recent user message
+      if (searchTopic.isEmpty && recentMessages.isNotEmpty) {
+        for (int i = recentMessages.length - 1; i >= 0; i--) {
+          if (recentMessages[i]['role'] == 'user' && 
+              !ContentRequestHandler.isNegativeFeedback(recentMessages[i]['content'])) {
+            searchTopic = recentMessages[i]['content'];
+            print('Using full recent message as topic: ${searchTopic.substring(0, math.min(50, searchTopic.length))}...');
+            break;
+          }
+        }
+      }
+      
+      // If we still don't have a valid search topic, return empty list
+      if (searchTopic.isEmpty) {
+        print('Could not determine search topic for better videos');
+        return [];
+      }
+      
+      // Make the search more specific by adding tutorial-related keywords
+      final enhancedQuery = BotModel.refineVideoSearchQuery(searchTopic, ['tutorial', 'guide', 'how to']);
+      print('Searching for better videos with query: $enhancedQuery');
+      
+      // Search for videos with the enhanced query
+      return await _youtubeService.searchVideos(enhancedQuery);
     } catch (e) {
-      print('Error searching for better videos: $e');
+      print('Error finding better videos: $e');
       return [];
     }
   }

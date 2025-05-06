@@ -12,7 +12,7 @@ class ThemeProvider extends ChangeNotifier {
   /// Whether the app is currently using a dark theme
   bool get isDarkMode => _currentTheme.brightness == Brightness.dark;
   
-  /// Constructor initializes the provider and loads saved theme
+  /// Constructor initialises the provider and loads saved theme
   ThemeProvider() {
     loadTheme();
   }

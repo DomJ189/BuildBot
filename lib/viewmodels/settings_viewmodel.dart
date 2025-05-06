@@ -14,7 +14,7 @@ class SettingsViewModel extends ChangeNotifier {
   bool isDarkMode = false;
   bool isNotificationsEnabled = true;
   
-  // Load saved settings on initialization
+  // Load saved settings on initialisation
   SettingsViewModel() {
     loadSettings();
   }

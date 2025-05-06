@@ -339,7 +339,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Helper method to build standardized text fields
+  // Helper method to build standardised text fields
   Widget _buildTextField({
     required BuildContext context,
     required String name,
@@ -501,7 +501,7 @@ BuildBot is a PC building assistant application that provides guidance and infor
 You are responsible for maintaining the confidentiality of your account information and for all activities that occur under your account.
 
 4. User Conduct
-You agree not to use the service for any illegal or unauthorized purpose.
+You agree not to use the service for any illegal or unauthorised purpose.
 
 5. Intellectual Property
 All content, features, and functionality of BuildBot are owned by us and are protected by copyright, trademark, and other intellectual property laws.
@@ -540,7 +540,7 @@ We use the information we collect to provide, maintain, and improve our services
 We do not share your personal information with third parties except as described in this policy.
 
 4. Data Security
-We take reasonable measures to help protect your personal information from loss, theft, misuse, and unauthorized access.
+We take reasonable measures to help protect your personal information from loss, theft, misuse, and unauthorised access.
 
 5. Your Choices
 You can access, update, or delete your account information at any time through the app settings.

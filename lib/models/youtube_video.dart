@@ -21,7 +21,7 @@ class YouTubeVideo {
   // YouTube deep link format for mobile apps
   String get deepLinkUrl => 'vnd.youtube:$id';
   
-  // Creates a map representation for serialization
+  // Creates a map representation for serialisation
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -32,7 +32,7 @@ class YouTubeVideo {
     };
   }
   
-  // Create from a map, useful for deserialization
+  // Create from a map, useful for deserialisation
   factory YouTubeVideo.fromMap(Map<String, dynamic> map) {
     return YouTubeVideo(
       id: map['id'] ?? '',

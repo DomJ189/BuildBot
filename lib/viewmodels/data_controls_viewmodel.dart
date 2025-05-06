@@ -9,7 +9,7 @@ class DataControlsViewModel extends ChangeNotifier {
   String deletionPeriod = '30';
   bool isLoading = true;
   
-  // Initialize with required services
+  // Initialie with required services
   DataControlsViewModel({ChatService? chatService}) 
       : _chatService = chatService ?? ChatService() {
     loadPreferences();

@@ -285,7 +285,7 @@ class YouTubeService {
       }
     }
     
-    return query; // Return original if we couldn't generalize
+    return query; // Return original if we couldn't generalise
   }
   
   // Check if query is a comparison between hardware

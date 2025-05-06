@@ -117,7 +117,7 @@ class AboutBuildBotScreen extends StatelessWidget {
               '• Perplexity AI - For intelligent, context-aware responses\n'
               '• Firebase - For secure cloud storage and user authentication\n'
               '• Flutter - For a beautiful cross-platform experience\n'
-              '• Cloud Firestore - For real-time chat history synchronization',
+              '• Cloud Firestore - For real-time chat history synchronisation',
               themeProvider,
             ),
             SizedBox(height: 24),
@@ -336,12 +336,12 @@ class AboutBuildBotScreen extends StatelessWidget {
               ),
               _buildTermItem(
                 'Information Sharing',
-                'We do not share personal information with companies, organizations, or individuals outside of BuildBot except in limited circumstances.',
+                'We do not share personal information with companies, organisations, or individuals outside of BuildBot except in limited circumstances.',
                 themeProvider,
               ),
               _buildTermItem(
                 'Information Security',
-                'We work hard to protect our users from unauthorized access or unauthorized alteration, disclosure, or destruction of information.',
+                'We work hard to protect our users from unauthorised access or unauthorised alteration, disclosure, or destruction of information.',
                 themeProvider,
               ),
             ],

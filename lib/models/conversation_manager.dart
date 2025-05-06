@@ -14,16 +14,42 @@ class ConversationManager {
 
   void clear() => _history.clear();
 
-  void initializeFrom(List<Map<String, dynamic>> messages) {
+  void initialiseFrom(List<Map<String, dynamic>> messages) {
     clear();
     
     // Process all messages into the history preserving exact conversation flow
     for (var message in messages) {
-      String role = message['sender'] == 'user' ? 'user' : 'assistant';
-      String content = (message['message'] ?? '').toString();
+      // Check for different possible field names to improve robustness
+      String role;
+      String content;
+      
+      // Determine role: could be in 'role' field or derived from 'sender'
+      if (message.containsKey('role')) {
+        role = message['role'].toString();
+      } else if (message.containsKey('sender')) {
+        role = message['sender'] == 'user' ? 'user' : 'assistant';
+      } else {
+        // Skip messages without role information
+        print('Warning: Skipping message without role/sender information');
+        continue;
+      }
+      
+      // Determine content: could be in 'content' field or 'message'
+      if (message.containsKey('content')) {
+        content = message['content'].toString();
+      } else if (message.containsKey('message')) {
+        content = message['message'].toString();
+      } else {
+        // Skip messages without content
+        print('Warning: Skipping message without content/message information');
+        continue;
+      }
       
       // Skip empty messages
-      if (content.trim().isEmpty) continue;
+      if (content.trim().isEmpty) {
+        print('Warning: Skipping empty message');
+        continue;
+      }
       
       _history.add({'role': role, 'content': content});
     }
@@ -32,11 +58,12 @@ class ConversationManager {
     _trimHistory();
     
     // Debug log to verify history is properly loaded
-    print('Initialized conversation with ${_history.length} messages');
+    print('✓ Initialised conversation with ${_history.length} messages');
     for (int i = 0; i < _history.length; i++) {
       final content = _history[i]['content']?.toString() ?? '';
       final previewLength = math.min<int>(50, content.length);
-      print('Message ${i+1}: ${_history[i]['role']} - ${content.substring(0, previewLength)}...');
+      final preview = content.length > 0 ? content.substring(0, previewLength) : '';
+      print('Message ${i+1}: ${_history[i]['role']} - $preview${content.length > previewLength ? "..." : ""}');
     }
   }
 
@@ -47,6 +74,7 @@ class ConversationManager {
       // Remove from the middle rather than just the beginning to preserve the start and end context
       int removeCount = _history.length - _maxHistoryLength;
       int startRemoveIndex = (_maxHistoryLength ~/ 5); // Keep some early context
+      print('Trimming conversation history: removing $removeCount messages starting at index $startRemoveIndex');
       _history.removeRange(startRemoveIndex, startRemoveIndex + removeCount);
     }
   }

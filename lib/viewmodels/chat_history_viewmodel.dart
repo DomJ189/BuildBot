@@ -20,7 +20,7 @@ class ChatHistoryViewModel extends ChangeNotifier {
   // Store deleted chat for undo
   Chat? _lastDeletedChat;
   
-  // Initialize with chat service
+  // Initialise with chat service
   ChatHistoryViewModel({required this.chatService}) {
     loadChats();
   }
