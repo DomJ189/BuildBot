@@ -44,6 +44,7 @@ BuildBot is a mobile application that provides AI-assisted PC building and maint
 1. Install Flutter SDK: https://docs.flutter.dev/get-started/install
 2. Install Android Studio or VS Code with Flutter plugins
 3. Set up an Android emulator or connect a physical device
+4. You will need your own API credentials for the APIs and link your own Firebase project
 
 ### Getting Started
 1. Clone this repository
@@ -73,7 +74,7 @@ BuildBot is a mobile application that provides AI-assisted PC building and maint
 - Verify your Flutter installation with `flutter doctor`
 
 ## About the Project
-BuildBot was created to democratize PC building knowledge, making it accessible to everyone from beginners to experienced builders. By combining AI technology with a user-friendly interface, BuildBot aims to reduce the learning curve associated with PC building and maintenance.
+BuildBot was created to democratise PC building knowledge, making it accessible to everyone from beginners to experienced builders. By combining AI technology with a user-friendly interface, BuildBot aims to reduce the learning curve associated with PC building and maintenance.
 
 ## Contact
 - GitHub: [@DomJ189](https://github.com/DomJ189)
