@@ -22,8 +22,9 @@ class RedditService {
     final response = await http.post(
       Uri.parse('https://www.reddit.com/api/v1/access_token'),
       headers: {
-        'Authorisation': 'Basic ${base64Encode(utf8.encode('$clientId:$clientSecret'))}',
         'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ${base64Encode(utf8.encode('$clientId:$clientSecret'))}',
+        'User-Agent': 'BuildBot/1.0.0',
       },
       body: {
         'grant_type': 'client_credentials',
@@ -73,7 +74,7 @@ class RedditService {
       final response = await http.get(
         uri,
         headers: {
-          'Authorisation': 'Bearer $token',
+          'Authorization': 'Bearer $token',
           'User-Agent': 'BuildBot/1.0.0',
         },
       ).timeout(

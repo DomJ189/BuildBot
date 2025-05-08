@@ -15,7 +15,6 @@ import '../models/gpu_model.dart';
 
 // Handles communication with the Perplexity AI API for generating responses
 class BotService {
-  // Change from final to non-final to allow modification
   String apiKey; 
   final ConversationManager _conversation = ConversationManager();
   final YouTubeService _youtubeService;
@@ -196,7 +195,7 @@ class BotService {
     return result;
   }
 
-  // Enhanced fetchResponse method to include tech news, Reddit troubleshooting, and GPU recommendations
+  // Fetch response from Perplexity API
   Future<Map<String, dynamic>> fetchResponse(String prompt) async {
     try {
       _conversation.addMessage('user', prompt);
@@ -223,6 +222,7 @@ class BotService {
     }
   }
 
+  // Build additional context for the Perplexity API
   Future<String> _buildAdditionalContext(String prompt) async {
     String context = '';
     
@@ -290,7 +290,7 @@ class BotService {
         url,
         headers: {
         'Content-Type': 'application/json',
-        'Authorisation': 'Bearer $apiKey',
+        'Authorization': 'Bearer $apiKey',
       },
       body: body,
     );
@@ -369,7 +369,7 @@ class BotService {
         
         // Only add the user message if it's not a duplicate of the last message
         if (!isDuplicateMessage) {
-          // Add user message to history
+      // Add user message to history
           _conversation.addMessage('user', message);
           print('Added user message to conversation');
         }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/reddit_post.dart';
 
+// RedditLinkCard is a widget that displays a card with a Reddit post title, selftext, and a link to the Reddit post.
 class RedditLinkCard extends StatelessWidget {
   final RedditPost post;
   
@@ -112,7 +113,7 @@ class RedditLinkCard extends StatelessWidget {
       ),
     );
   }
-  
+  // Launch the Reddit URL
   Future<void> _launchRedditUrl(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {

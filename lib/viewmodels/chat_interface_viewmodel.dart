@@ -111,19 +111,6 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       
       print('Loaded ${messages.length} messages into memory');
       
-      // Initialise API service with conversation history for context
-      // Create properly formatted messages for API context
-      final botMessages = messages.map((m) => {
-        'role': m['sender'] == 'user' ? 'user' : 'assistant',
-        'content': m['message'] ?? '',
-      }).toList();
-      
-      // Always reinitialise the conversation context when loading a chat
-      // This is critical for maintaining context between sessions
-      botService.clearConversationHistory();
-      botService.initialiseConversationHistory(botMessages);
-      
-      print('Conversation context initialised for API with ${botMessages.length} messages');
     }
     
     // Load user preferences for typing speed
@@ -515,7 +502,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
       final chatMessages = messages.map((m) => {
         'sender': m['sender'] ?? '',
         'message': m['message'] ?? '',
-        // Convert videos to serializable format
+        // Convert videos to serialisable format
         'videos': (m['videos'] as List<dynamic>?)?.map((video) {
           if (video is YouTubeVideo) {
             return {
@@ -528,7 +515,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
           }
           return null;
         }).whereType<Map<String, dynamic>>().toList() ?? [],
-        // Convert Reddit posts to serializable format
+        // Convert Reddit posts to serialisable format
         'redditPosts': (m['redditPosts'] as List<dynamic>?)?.map((post) {
           if (post is RedditPost) {
             return post.toMap();

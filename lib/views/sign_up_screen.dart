@@ -42,6 +42,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
+// Sign up screen
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

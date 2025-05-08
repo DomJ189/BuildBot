@@ -28,7 +28,8 @@ class _AccountDetailsView extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final viewModel = Provider.of<AccountDetailsViewModel>(context);
     final isDarkTheme = themeProvider.currentTheme.brightness == Brightness.dark;
-    
+
+    // Get the user's display name, email, creation date, and initial
     final displayName = viewModel.displayName;
     final email = viewModel.email;
     final creationDate = viewModel.creationDate;
