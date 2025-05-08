@@ -322,7 +322,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: YouTubeVideoPlayer(video: video),
                         )
-                      ).toList(),
+                      ),
                     ],
                   ),
                 ),
@@ -347,7 +347,7 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: RedditLinkCard(post: post),
                         )
-                      ).toList(),
+                      ),
                     ],
                   ),
                 ),
@@ -420,12 +420,12 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                           ),
                         ),
                         SizedBox(height: 8),
-                        ...videosList!.map((video) => 
+                        ...videosList.map((video) => 
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
                             child: YouTubeVideoPlayer(video: video as YouTubeVideo),
                           )
-                        ).toList(),
+                        ),
                       ],
                     ),
                   ),
@@ -446,12 +446,12 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
                           ),
                         ),
                         SizedBox(height: 8),
-                        ...redditPostsList!.map((post) => 
+                        ...redditPostsList.map((post) => 
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
                             child: RedditLinkCard(post: post as RedditPost),
                           )
-                        ).toList(),
+                        ),
                       ],
                     ),
                   ),

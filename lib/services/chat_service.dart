@@ -470,7 +470,7 @@ class ChatService {
       
       for (var doc in allChats.docs) {
         try {
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data();
           
           // Check if chat has a creation date
           final chatDateStr = data['createdAt'] as String?;

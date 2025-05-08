@@ -69,11 +69,9 @@ class AppTheme {
         
         // Surface and background colors
         surface: background,
-        background: background,
         
         // Text colors for different surfaces
         onSurface: text,
-        onBackground: text,
         
         // Text color on primary/secondary colored elements (for contrast)
         onPrimary: onPrimary ?? (isDark ? Colors.black : Colors.white),

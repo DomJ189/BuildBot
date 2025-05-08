@@ -67,7 +67,7 @@ class DataRetentionService {
     List<DocumentSnapshot> docsToDelete = [];
     for (var doc in allChats.docs) {
       try {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         
         final chatDateStr = data['createdAt'] as String?;
         if (chatDateStr != null) {

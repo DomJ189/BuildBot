@@ -62,7 +62,7 @@ class ConversationManager {
     for (int i = 0; i < _history.length; i++) {
       final content = _history[i]['content']?.toString() ?? '';
       final previewLength = math.min<int>(50, content.length);
-      final preview = content.length > 0 ? content.substring(0, previewLength) : '';
+      final preview = content.isNotEmpty ? content.substring(0, previewLength) : '';
       print('Message ${i+1}: ${_history[i]['role']} - $preview${content.length > previewLength ? "..." : ""}');
     }
   }

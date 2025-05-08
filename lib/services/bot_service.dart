@@ -5,13 +5,11 @@ import 'tech_news_service.dart';
 import 'reddit_service.dart';
 import 'gpu_recommendation_service.dart';
 import 'dart:math' as math;
-import '../models/reddit_post.dart';
 import '../models/youtube_video.dart';
 import '../models/conversation_manager.dart';
 import '../models/content_request_handler.dart';
 import '../models/conversational_response_handler.dart';
 import '../models/bot_model.dart';
-import '../models/gpu_model.dart';
 
 // Handles communication with the Perplexity AI API for generating responses
 class BotService {

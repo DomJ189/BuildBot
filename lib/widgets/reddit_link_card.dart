@@ -7,9 +7,9 @@ class RedditLinkCard extends StatelessWidget {
   final RedditPost post;
   
   const RedditLinkCard({
-    Key? key, 
+    super.key, 
     required this.post,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

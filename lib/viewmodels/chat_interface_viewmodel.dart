@@ -7,7 +7,6 @@ import '../models/chat.dart';
 import '../models/reddit_post.dart';
 import '../models/youtube_video.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../services/youtube_service.dart';
 
 class ChatInterfaceViewModel extends ChangeNotifier {
   // Core message storage and service dependencies
@@ -225,8 +224,8 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         });
         
         // Remove any subsequent messages as they're now out of context
-        if (editedIndex! + 2 < messages.length) {
-          messages.removeRange(editedIndex! + 2, messages.length);
+        if (editedIndex + 2 < messages.length) {
+          messages.removeRange(editedIndex + 2, messages.length);
         }
         
         // Update UI state
@@ -250,7 +249,7 @@ class ChatInterfaceViewModel extends ChangeNotifier {
         
         // If there was an error, restore the original bot message
         if (editedIndex! + 1 <= messages.length) {
-          messages.insert(editedIndex! + 1, botMessage);
+          messages.insert(editedIndex + 1, botMessage);
         }
         
         notifyListeners();

@@ -488,7 +488,7 @@ class RedditService {
       }
       
       if (problemTerm.isNotEmpty) {
-        return '${detectedComponents.join(' ')} ${problemTerm}';
+        return '${detectedComponents.join(' ')} $problemTerm';
       } else {
         return '${detectedComponents.join(' ')} problem';
       }

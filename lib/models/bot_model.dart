@@ -1,7 +1,4 @@
-import 'dart:convert';
-import 'dart:math' as math;
 import '../models/reddit_post.dart';
-import '../models/youtube_video.dart';
 
 /// Handles data processing and extraction for bot responses
 class BotModel {
