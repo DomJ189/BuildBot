@@ -31,7 +31,6 @@ class ThemeSelectionViewModel extends ChangeNotifier {
   
   /// Applies the selected theme 
   Future<void> saveSelectedTheme() async {
-    // This method is kept for compatibility with the existing UI code
     return;
   }
 } 
