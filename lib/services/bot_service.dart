@@ -343,7 +343,7 @@ class BotService {
     }
   }
 
-  // Modify the getResponseWithVideos method to handle video requests differently
+  // Get response from Perplexity API with videos
   Future<Map<String, dynamic>> getResponseWithVideos(String message, List<Map<String, dynamic>> messages) async {
     try {
       // If messages are provided, reinitialise the conversation context
@@ -533,7 +533,7 @@ class BotService {
     }
   }
 
-  // Update this method signature
+  // Get response from Perplexity API
   Future<String> getResponse(String message, List<Map<String, dynamic>> messages) async {
     final response = await getResponseWithVideos(message, messages);
     return response['text'];
