@@ -227,7 +227,6 @@ class StyledAlerts {
       case AlertType.warning:
         return isDarkTheme ? const Color(0xFF8F5000) : const Color(0xFFFFF8E1);
       case AlertType.info:
-      default:
         return isDarkTheme ? const Color(0xFF01579B) : const Color(0xFFE1F5FE);
     }
   }
@@ -241,7 +240,6 @@ class StyledAlerts {
       case AlertType.warning:
         return isDarkTheme ? Colors.white : const Color(0xFF8F5000);
       case AlertType.info:
-      default:
         return isDarkTheme ? Colors.white : const Color(0xFF01579B);
     }
   }
@@ -255,7 +253,6 @@ class StyledAlerts {
       case AlertType.warning:
         return Icons.warning_amber_outlined;
       case AlertType.info:
-      default:
         return Icons.info_outline;
     }
   }

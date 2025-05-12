@@ -360,9 +360,6 @@ class _ChatInterfaceState extends State<ChatInterface> with TickerProviderStateM
           final message = viewModel.messages[index];
           final isUser = message['sender'] == 'user';
           
-          // Check if this message is being edited
-          final isEditing = viewModel.editingMessageIndex == index;
-          
           // Render different bubble styles for user vs bot
           if (isUser) {
             return _buildUserMessage(

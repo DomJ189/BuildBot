@@ -230,7 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.currentTheme.brightness == Brightness.dark;
     
-    double selectedSpeed = chatService.typingSpeed ?? 1.5;
+    double selectedSpeed = chatService.typingSpeed;
     
     showDialog(
       context: context,

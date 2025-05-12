@@ -241,11 +241,6 @@ class YouTubeService {
     return _isComparisonQuery(lowerQuery) && _containsHardwareTerms(lowerQuery);
   }
   
-  // Check if a query is about hardware
-  bool _isHardwareQuery(String query) {
-    return _containsHardwareTerms(query.toLowerCase());
-  }
-  
   // Convert specific model comparisons to more generic hardware category comparisons
   // For example: "RTX 3080 vs RTX 4090" -> "GPU comparison"
   String _makeGenericHardwareQuery(String query) {

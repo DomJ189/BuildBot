@@ -48,13 +48,6 @@ class BotService {
       }
     }
   }
-
-  // Removes citation numbers in square brackets from text
-  String _removeCitations(String text) {
-    // Regular expression to match citation numbers like [1], [2], etc.
-    final citationRegex = RegExp(r'\[\d+\]');
-    return text.replaceAll(citationRegex, '');
-  }
   
   // Clear conversation history (for starting a new chat)
   void clearConversationHistory() {
@@ -248,7 +241,7 @@ class BotService {
     if (BotModel.shouldFetchRedditPosts(prompt)) {
       try {
         return await _redditService.searchRedditForTroubleshooting(prompt);
-      } catch (e) {
+    } catch (e) {
         print('Error fetching Reddit posts: $e');
       }
     }
@@ -304,42 +297,6 @@ class BotService {
         print('Error: ${response.statusCode}');
         print('Response body: ${response.body}');
         throw Exception('Failed to fetch response: ${response.statusCode} - ${response.body}');
-    }
-  }
-
-  // Validate that messages follow the alternating pattern required by the API
-  void _validateMessageSequence(List<Map<String, dynamic>> messages) {
-    if (messages.isEmpty) {
-      print('Warning: Empty message list sent to API');
-      return;
-    }
-    
-    bool isValid = true;
-    String lastRole = '';
-    
-    for (int i = 0; i < messages.length; i++) {
-      final role = messages[i]['role'] as String;
-      
-      if (i > 0) {
-        // After the first message, roles should alternate
-        if (role == lastRole) {
-          print('Error: Message at index $i has the same role ($role) as the previous message');
-          isValid = false;
-          break;
-        }
-      }
-      
-      lastRole = role;
-    }
-    
-    if (!isValid) {
-      print('WARNING: Message sequence does not follow alternating pattern. API may return an error.');
-      // Print message roles for debugging
-      for (int i = 0; i < messages.length; i++) {
-        print('Message $i: ${messages[i]['role']}');
-      }
-    } else {
-      print('Message sequence validation passed: roles are properly alternating');
     }
   }
 
